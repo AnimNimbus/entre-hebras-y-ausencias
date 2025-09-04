@@ -1,0 +1,21 @@
+# Mantén fuera del repo archivos pesados de 3D/edición
+*.blend
+*.blend1
+*.blend2
+*.fbx
+*.ztl
+*.zpr
+*.ma
+*.mb
+*.psd
+
+# Temporales / caché del sistema
+*.tmp
+*.bak
+.DS_Store
+Thumbs.db
+
+# Carpetas de builds (si en el futuro usas herramientas web)
+node_modules/
+dist/
+build/
