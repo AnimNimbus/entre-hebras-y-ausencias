@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AR Proyecto</title>
+  <style>
+    body { margin: 0; overflow: hidden; background: #ffffff; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.152.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.152.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.152.0/examples/js/controls/OrbitControls.js"></script>
+  
+  <script>
+    // Escena
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({antialias: true});
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Luz
+    const light = new THREE.DirectionalLight(0xffffff, 1);
+    light.position.set(5,5,5).normalize();
+    scene.add(light);
+
+    // Cargar modelo GLTF/GLB
+    const loader = new THREE.GLTFLoader();
+    loader.load(
+      'modelo.glb', // 👈 aquí pondrás tu archivo
+      function (gltf) {
+        scene.add(gltf.scene);
+        gltf.scene.position.set(0, -1, 0);
+        gltf.scene.scale.set(1,1,1);
+      },
+      undefined,
+      function (error) {
+        console.error('Error cargando modelo:', error);
+      }
+    );
+
+    // Cámara y controles
+    camera.position.z = 3;
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+    // Animación
+    function animate() {
+      requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
