@@ -30,7 +30,7 @@
     // Cargar modelo GLTF/GLB
     const loader = new THREE.GLTFLoader();
     loader.load(
-      'victima_base.glb', // 👈 aquí pondrás tu archivo
+  './victima_base.glb', // 👈 aquí pondrás tu archivo
       function (gltf) {
         scene.add(gltf.scene);
         gltf.scene.position.set(0, -1, 0);
