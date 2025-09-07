@@ -10,6 +10,7 @@
   </style>
 </head>
 <body>
+  <!-- Librerías Three.js -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.152.0/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.152.0/examples/js/loaders/GLTFLoader.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.152.0/examples/js/controls/OrbitControls.js"></script>
@@ -24,17 +25,17 @@
 
     // Luz
     const light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(5,5,5).normalize();
+    light.position.set(5, 5, 5).normalize();
     scene.add(light);
 
-    // Cargar modelo GLTF/GLB
+    // Cargar modelo GLTF/GLB desde GitHub
     const loader = new THREE.GLTFLoader();
     loader.load(
-  './victima_base.glb', // 👈 aquí pondrás tu archivo
+      'https://raw.githubusercontent.com/AnimNimbus/entre-hebras-y-ausencias/main/victima_base.glb', // 👈 Ruta absoluta
       function (gltf) {
         scene.add(gltf.scene);
         gltf.scene.position.set(0, -1, 0);
-        gltf.scene.scale.set(1,1,1);
+        gltf.scene.scale.set(1, 1, 1);
       },
       undefined,
       function (error) {
@@ -53,6 +54,7 @@
     }
     animate();
 
+    // Resize dinámico
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
@@ -61,4 +63,3 @@
   </script>
 </body>
 </html>
-
