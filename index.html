@@ -30,7 +30,7 @@
     // Cargar modelo
     const loader = new GLTFLoader();
     loader.load(
-      "./victima_base.glb",   // 👈 asegúrate de que este archivo está en la raíz del repo
+      "victima_base.glb",   // 👈 asegúrate de que el .glb está en la raíz de tu repo
       (gltf) => {
         const model = gltf.scene;
         model.position.set(0, -1, 0);
