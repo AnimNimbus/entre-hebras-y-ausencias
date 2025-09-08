@@ -1,79 +1,65 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>Entre Hebras y Ausencias</title>
-    <style>
-      body { margin: 0; overflow: hidden; }
-      canvas { display: block; }
-    </style>
-  </head>
-  <body>
-    <script type="module">
-      import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.module.js";
-      import { GLTFLoader } from "https://cdn.jsdelivr.net/npm/three@0.150.1/examples/jsm/loaders/GLTFLoader.js";
-      import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.150.1/examples/jsm/controls/OrbitControls.js";
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AR Proyecto</title>
+  <style>
+    body { margin: 0; overflow: hidden; background: #ffffff; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <script type="module">
+    import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.module.js";
+    import { GLTFLoader } from "https://cdn.jsdelivr.net/npm/three@0.150.1/examples/jsm/loaders/GLTFLoader.js";
+    import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.150.1/examples/jsm/controls/OrbitControls.js";
 
-      // Escena
-      const scene = new THREE.Scene();
-      scene.background = new THREE.Color(0xeeeeee);
+    // Escena
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
 
-      // Cámara
-      const camera = new THREE.PerspectiveCamera(
-        75,
-        window.innerWidth / window.innerHeight,
-        0.1,
-        1000
-      );
-      camera.position.set(0, 1, 3);
+    // Luz
+    const light = new THREE.DirectionalLight(0xffffff, 1);
+    light.position.set(5, 5, 5).normalize();
+    scene.add(light);
 
-      // Render
-      const renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      document.body.appendChild(renderer.domElement);
-
-      // Luces
-      const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
-      light.position.set(0, 20, 0);
-      scene.add(light);
-
-      const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-      dirLight.position.set(5, 10, 7.5);
-      scene.add(dirLight);
-
-      // Controles
-      const controls = new OrbitControls(camera, renderer.domElement);
-
-      // Loader del modelo
-      const loader = new GLTFLoader();
-      loader.load(
-        "victima_base.glb", // 👈 asegúrate de que este archivo esté en la carpeta raíz del repo
-        function (gltf) {
-          const model = gltf.scene;
-          model.position.set(0, -1, 0);
-          model.scale.set(1, 1, 1);
-          scene.add(model);
-        },
-        undefined,
-        function (error) {
-          console.error("Error al cargar el modelo:", error);
-        }
-      );
-
-      // Animación
-      function animate() {
-        requestAnimationFrame(animate);
-        renderer.render(scene, camera);
+    // Cargar modelo
+    const loader = new GLTFLoader();
+    loader.load(
+      "./victima_base.glb",   // 👈 asegúrate de que este archivo está en la raíz del repo
+      (gltf) => {
+        const model = gltf.scene;
+        model.position.set(0, -1, 0);
+        model.scale.set(1, 1, 1);
+        scene.add(model);
+      },
+      undefined,
+      (error) => {
+        console.error("Error cargando modelo:", error);
       }
-      animate();
+    );
 
-      // Resize
-      window.addEventListener("resize", () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-      });
-    </script>
-  </body>
+    // Cámara y controles
+    camera.position.z = 3;
+    const controls = new OrbitControls(camera, renderer.domElement);
+
+    // Animación
+    function animate() {
+      requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // Ajuste al cambiar ventana
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
 </html>
-
