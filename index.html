@@ -4,103 +4,87 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AR Proyecto</title>
-  <style>
-    body { margin: 0; overflow: hidden; background: #000; }
-    canvas { display: block; }
-  </style>
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/dist/aframe/mindar-image-aframe.prod.js"></script>
 </head>
 <body>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.152.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.152.0/examples/js/loaders/GLTFLoader.js"></script>
+  <!-- Escena de AR -->
+  <a-scene
+    mindar-image="imageTargetSrc: ./targets/cuadros.mind"
+    embedded
+    color-space="sRGB"
+    renderer="colorManagement: true, physicallyCorrectLights"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false">
+
+    <a-assets>
+      <!-- Videos -->
+      <video id="vidVictima" src="./videos/victima.mp4" preload="auto" playsinline webkit-playsinline></video>
+      <video id="vidAgresor" src="./videos/agresor.mp4" preload="auto" playsinline webkit-playsinline></video>
+      <video id="vidTestigo" src="./videos/testigo.mp4" preload="auto" playsinline webkit-playsinline></video>
+      <!-- Modelo 3D -->
+      <a-asset-item id="poseFinal" src="./models/pose_final_cuadro.glb"></a-asset-item>
+    </a-assets>
+
+    <!-- Cuadro Víctima -->
+    <a-entity mindar-image-target="targetIndex: 0">
+      <a-video src="#vidVictima" width="1.5" height="1" position="0 0 0"></a-video>
+    </a-entity>
+
+    <!-- Cuadro Agresor -->
+    <a-entity mindar-image-target="targetIndex: 1">
+      <a-video src="#vidAgresor" width="1.5" height="1" position="0 0 0"></a-video>
+    </a-entity>
+
+    <!-- Cuadro Testigo -->
+    <a-entity mindar-image-target="targetIndex: 2" id="testigoTarget">
+      <a-video id="testigoVideo" src="#vidTestigo" width="1.5" height="1" position="0 0 0"></a-video>
+      <!-- Modelo oculto al inicio -->
+      <a-gltf-model id="poseModel"
+        src="#poseFinal"
+        scale="0.3 0.3 0.3"
+        position="0 -0.2 0.1"
+        rotation="0 0 0"
+        visible="false">
+      </a-gltf-model>
+    </a-entity>
+
+    <a-camera position="0 0 0"></a-camera>
+  </a-scene>
 
   <script>
-    // Escena
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer({antialias: true});
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
+    const vidVictima = document.querySelector("#vidVictima");
+    const vidAgresor = document.querySelector("#vidAgresor");
+    const vidTestigo = document.querySelector("#vidTestigo");
+    const model = document.querySelector("#poseModel");
 
-    // Luz
-    const light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(5,5,5).normalize();
-    scene.add(light);
+    let videosFinished = 0;
 
-    // Cargar imagen del cuadro
-    const textureLoader = new THREE.TextureLoader();
-    textureLoader.load('victima_cuadro.png', function(texture) {
-      const geometry = new THREE.PlaneGeometry(3, 2);
-      const material = new THREE.MeshBasicMaterial({ map: texture });
-      const plane = new THREE.Mesh(geometry, material);
-      scene.add(plane);
-
-      // Posición base sobre el cuadro
-      const basePosition = { x: 0, y: -0.5, z: 0.05 };
-
-      // Loader de modelos
-      const loader = new THREE.GLTFLoader();
-      const mixers = []; // Para animaciones
-
-      // Función para cargar un modelo
-      function loadModel(file) {
-        return new Promise((resolve, reject) => {
-          loader.load(
-            file,
-            function (gltf) {
-              gltf.scene.position.set(basePosition.x, basePosition.y, basePosition.z);
-              gltf.scene.scale.set(0.8, 0.8, 0.8);
-              scene.add(gltf.scene);
-
-              // Si tiene animaciones
-              if (gltf.animations.length > 0) {
-                const mixer = new THREE.AnimationMixer(gltf.scene);
-                mixers.push({ mixer, clip: gltf.animations[0] });
-              }
-
-              resolve(gltf);
-            },
-            undefined,
-            reject
-          );
-        });
+    function checkAllVideosFinished() {
+      videosFinished++;
+      if (videosFinished === 3) {
+        // Mostrar el modelo en el cuadro testigo
+        model.setAttribute("visible", "true");
+        // Animar rotación hasta 180°
+        let angle = 0;
+        const interval = setInterval(() => {
+          angle += 2;
+          model.setAttribute("rotation", `0 ${angle} 0`);
+          if (angle >= 180) clearInterval(interval);
+        }, 50);
       }
+    }
 
-      // Cargar los tres modelos
-      Promise.all([
-        loadModel('victima_base.glb'),
-        loadModel('agresor_base.glb'),
-        loadModel('testigo_base.glb')
-      ]).then(() => {
-        console.log("Modelos cargados");
+    // Eventos al terminar cada video
+    vidVictima.onended = checkAllVideosFinished;
+    vidAgresor.onended = checkAllVideosFinished;
+    vidTestigo.onended = checkAllVideosFinished;
 
-        // Esperar 2 segundos y reproducir animaciones
-        setTimeout(() => {
-          mixers.forEach(({mixer, clip}) => {
-            const action = mixer.clipAction(clip);
-            action.play();
-          });
-        }, 2000);
-      });
-
-      // Animación
-      const clock = new THREE.Clock();
-      function animate() {
-        requestAnimationFrame(animate);
-        const delta = clock.getDelta();
-        mixers.forEach(({mixer}) => mixer.update(delta));
-        renderer.render(scene, camera);
-      }
-      animate();
-    });
-
-    // Cámara
-    camera.position.z = 4;
-
-    // Ajustar ventana
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
+    // Reproducir los videos al detectar targets
+    document.querySelector("a-scene").addEventListener("targetFound", (e) => {
+      if (e.detail.targetIndex === 0) vidVictima.play();
+      if (e.detail.targetIndex === 1) vidAgresor.play();
+      if (e.detail.targetIndex === 2) vidTestigo.play();
     });
   </script>
 </body>
