@@ -2,89 +2,73 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AR Proyecto</title>
-  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/dist/aframe/mindar-image-aframe.prod.js"></script>
+  <title>Entre Hebras y Ausencias</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <!-- Librerías necesarias -->
+  <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.2/dist/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    video { display: none; } /* ocultar los controles de los <video> */
+  </style>
 </head>
 <body>
-  <!-- Escena de AR -->
+  <!-- Escena con AR -->
   <a-scene
-    mindar-image="imageTargetSrc: ./targets/cuadros.mind"
-    embedded
+    mindar-image="imageTargetSrc: ./targets/cuadros.mind;"
     color-space="sRGB"
     renderer="colorManagement: true, physicallyCorrectLights"
     vr-mode-ui="enabled: false"
-    device-orientation-permission-ui="enabled: false">
+    device-orientation-permission-ui="enabled: true"
+  >
 
     <a-assets>
       <!-- Videos -->
-      <video id="vidVictima" src="./videos/victima.mp4" preload="auto" playsinline webkit-playsinline></video>
-      <video id="vidAgresor" src="./videos/agresor.mp4" preload="auto" playsinline webkit-playsinline></video>
-      <video id="vidTestigo" src="./videos/testigo.mp4" preload="auto" playsinline webkit-playsinline></video>
-      <!-- Modelo 3D -->
+      <video id="videoVictima" src="./videos/victima.mp4" preload="auto" crossorigin="anonymous"></video>
+      <video id="videoAgresor" src="./videos/agresor.mp4" preload="auto" crossorigin="anonymous"></video>
+      <video id="videoTestigo" src="./videos/testigo.mp4" preload="auto" crossorigin="anonymous"></video>
+
+      <!-- Modelo GLB -->
       <a-asset-item id="poseFinal" src="./models/pose_final_cuadro.glb"></a-asset-item>
     </a-assets>
 
-    <!-- Cuadro Víctima -->
+    <!-- Target víctima -->
     <a-entity mindar-image-target="targetIndex: 0">
-      <a-video src="#vidVictima" width="1.5" height="1" position="0 0 0"></a-video>
+      <a-video id="planeVictima" src="#videoVictima" width="1.5" height="1" position="0 0 0"></a-video>
+      <!-- Modelo 3D solo en víctima -->
+      <a-gltf-model id="poseFinalModel" src="#poseFinal" position="0 -0.3 0.1" scale="0.5 0.5 0.5" rotation="0 180 0" visible="false"></a-gltf-model>
     </a-entity>
 
-    <!-- Cuadro Agresor -->
+    <!-- Target agresor -->
     <a-entity mindar-image-target="targetIndex: 1">
-      <a-video src="#vidAgresor" width="1.5" height="1" position="0 0 0"></a-video>
+      <a-video id="planeAgresor" src="#videoAgresor" width="1.5" height="1" position="0 0 0"></a-video>
     </a-entity>
 
-    <!-- Cuadro Testigo -->
-    <a-entity mindar-image-target="targetIndex: 2" id="testigoTarget">
-      <a-video id="testigoVideo" src="#vidTestigo" width="1.5" height="1" position="0 0 0"></a-video>
-      <!-- Modelo oculto al inicio -->
-      <a-gltf-model id="poseModel"
-        src="#poseFinal"
-        scale="0.3 0.3 0.3"
-        position="0 -0.2 0.1"
-        rotation="0 0 0"
-        visible="false">
-      </a-gltf-model>
+    <!-- Target testigo -->
+    <a-entity mindar-image-target="targetIndex: 2">
+      <a-video id="planeTestigo" src="#videoTestigo" width="1.5" height="1" position="0 0 0"></a-video>
     </a-entity>
 
     <a-camera position="0 0 0"></a-camera>
   </a-scene>
 
   <script>
-    const vidVictima = document.querySelector("#vidVictima");
-    const vidAgresor = document.querySelector("#vidAgresor");
-    const vidTestigo = document.querySelector("#vidTestigo");
-    const model = document.querySelector("#poseModel");
+    // Obtener videos y modelo
+    const videoVictima = document.getElementById("videoVictima");
+    const videoAgresor = document.getElementById("videoAgresor");
+    const videoTestigo = document.getElementById("videoTestigo");
+    const poseFinalModel = document.getElementById("poseFinalModel");
 
-    let videosFinished = 0;
+    // Asegurar que se inicien los videos con interacción (limitación móvil)
+    document.body.addEventListener("click", () => {
+      videoVictima.play();
+      videoAgresor.play();
+      videoTestigo.play();
+    }, { once: true });
 
-    function checkAllVideosFinished() {
-      videosFinished++;
-      if (videosFinished === 3) {
-        // Mostrar el modelo en el cuadro testigo
-        model.setAttribute("visible", "true");
-        // Animar rotación hasta 180°
-        let angle = 0;
-        const interval = setInterval(() => {
-          angle += 2;
-          model.setAttribute("rotation", `0 ${angle} 0`);
-          if (angle >= 180) clearInterval(interval);
-        }, 50);
-      }
-    }
-
-    // Eventos al terminar cada video
-    vidVictima.onended = checkAllVideosFinished;
-    vidAgresor.onended = checkAllVideosFinished;
-    vidTestigo.onended = checkAllVideosFinished;
-
-    // Reproducir los videos al detectar targets
-    document.querySelector("a-scene").addEventListener("targetFound", (e) => {
-      if (e.detail.targetIndex === 0) vidVictima.play();
-      if (e.detail.targetIndex === 1) vidAgresor.play();
-      if (e.detail.targetIndex === 2) vidTestigo.play();
+    // Cuando termine el video de víctima, mostrar el modelo 3D
+    videoVictima.addEventListener("ended", () => {
+      poseFinalModel.setAttribute("visible", "true");
     });
   </script>
 </body>
