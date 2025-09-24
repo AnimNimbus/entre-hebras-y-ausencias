@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Entre hebras y ausencias</title>
+    <script src="https://cdn.jsdelivr.net/npm/aframe@1.5.0/dist/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+    <style>
+      body, html { margin: 0; padding: 0; overflow: hidden; }
+      #container { width: 100vw; height: 100vh; }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <a-scene
+        mindar-image="imageTargetSrc: ./targets/cuadros.mind;"
+        vr-mode-ui="enabled: false"
+        device-orientation-permission-ui="enabled: true"
+        embedded
+      >
+        <a-assets>
+          <!-- Videos -->
+          <video id="videoAgresor" src="./videos/agresor.mp4" preload="auto" playsinline crossorigin="anonymous"></video>
+          <video id="videoTestigo" src="./videos/testigo.mp4" preload="auto" playsinline crossorigin="anonymous"></video>
+          <video id="videoVictima" src="./videos/victima.mp4" preload="auto" playsinline crossorigin="anonymous"></video>
+
+          <!-- Modelo 3D final -->
+          <a-asset-item id="poseFinal" src="./models/pose_final_cuadro.glb"></a-asset-item>
+        </a-assets>
+
+        <!-- Targets -->
+        <a-entity id="agresorTarget" mindar-image-target="targetIndex: 0">
+          <a-video id="agresorVideoPlane" src="#videoAgresor" width="1" height="0.6" position="0 0 0"></a-video>
+        </a-entity>
+
+        <a-entity id="testigoTarget" mindar-image-target="targetIndex: 1">
+          <a-video id="testigoVideoPlane" src="#videoTestigo" width="1" height="0.6" position="0 0 0"></a-video>
+
+          <!-- El modelo aparece solo en el cuadro central (testigo) -->
+          <a-entity id="poseModel" gltf-model="#poseFinal" visible="false"
+            position="0 -0.1 0" scale="0.5 0.5 0.5" rotation="0 0 0">
+          </a-entity>
+        </a-entity>
+
+        <a-entity id="victimaTarget" mindar-image-target="targetIndex: 2">
+          <a-video id="victimaVideoPlane" src="#videoVictima" width="1" height="0.6" position="0 0 0"></a-video>
+        </a-entity>
+
+        <a-camera position="0 0 0"></a-camera>
+      </a-scene>
+    </div>
+
+    <script>
+      const videoAgresor = document.querySelector("#videoAgresor");
+      const videoTestigo = document.querySelector("#videoTestigo");
+      const videoVictima = document.querySelector("#videoVictima");
+
+      const agresorTarget = document.querySelector("#agresorTarget");
+      const testigoTarget = document.querySelector("#testigoTarget");
+      const victimaTarget = document.querySelector("#victimaTarget");
+
+      const poseModel = document.querySelector("#poseModel");
+
+      let agresorVisible = false;
+      let testigoVisible = false;
+      let victimaVisible = false;
+
+      function checkAllVisible() {
+        if (agresorVisible && testigoVisible && victimaVisible) {
+          // Reproducir todos los videos
+          videoAgresor.play();
+          videoTestigo.play();
+          videoVictima.play();
+
+          // Cuando todos los videos terminen -> mostrar modelo 3D
+          Promise.all([
+            new Promise(res => videoAgresor.onended = res),
+            new Promise(res => videoTestigo.onended = res),
+            new Promise(res => videoVictima.onended = res),
+          ]).then(() => {
+            poseModel.setAttribute("visible", "true");
+          });
+        }
+      }
+
+      // Eventos de visibilidad de targets
+      agresorTarget.addEventListener("targetFound", () => { agresorVisible = true; checkAllVisible(); });
+      testigoTarget.addEventListener("targetFound", () => { testigoVisible = true; checkAllVisible(); });
+      victimaTarget.addEventListener("targetFound", () => { victimaVisible = true; checkAllVisible(); });
+
+      agresorTarget.addEventListener("targetLost", () => { agresorVisible = false; });
+      testigoTarget.addEventListener("targetLost", () => { testigoVisible = false; });
+      victimaTarget.addEventListener("targetLost", () => { victimaVisible = false; });
+
+      // --- Rotación manual del modelo (limitada a 180°) ---
+      let isDragging = false;
+      let lastX = 0;
+      let currentRotation = 0;
+
+      document.addEventListener("touchstart", (e) => {
+        if (!poseModel.getAttribute("visible")) return;
+        isDragging = true;
+        lastX = e.touches[0].clientX;
+      });
+
+      document.addEventListener("touchmove", (e) => {
+        if (!isDragging) return;
+        let deltaX = e.touches[0].clientX - lastX;
+        lastX = e.touches[0].clientX;
+
+        currentRotation += deltaX * 0.5; // sensibilidad
+        if (currentRotation < 0) currentRotation = 0;
+        if (currentRotation > 180) currentRotation = 180;
+
+        poseModel.setAttribute("rotation", `0 ${currentRotation} 0`);
+      });
+
+      document.addEventListener("touchend", () => {
+        isDragging = false;
+      });
+    </script>
+  </body>
+</html>
