@@ -2,37 +2,43 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>AR con Cámara</title>
+  <title>AR con Cámara y Videos</title>
   <style>
     body {
       margin: 0;
       overflow: hidden;
       font-family: Arial, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: black;
     }
     #startButton {
-      position: absolute;
-      top: 20px;
-      left: 20px;
       z-index: 10;
-      padding: 10px 20px;
+      padding: 15px 30px;
+      font-size: 20px;
       background: #007bff;
       color: white;
       border: none;
-      border-radius: 8px;
+      border-radius: 12px;
       cursor: pointer;
+      position: absolute;
     }
     #instructionText {
       position: absolute;
-      top: 70px;
-      left: 20px;
+      bottom: 30px;
+      width: 100%;
+      text-align: center;
       z-index: 10;
-      padding: 10px 20px;
-      background: rgba(0,0,0,0.6);
+      font-size: 24px;
+      font-weight: bold;
+      padding: 15px;
+      background: rgba(0,0,0,0.5);
       color: white;
-      border-radius: 8px;
       display: none; /* oculto al inicio */
     }
-    video {
+    video#camera {
       position: absolute;
       top: 0;
       left: 0;
@@ -41,6 +47,16 @@
       object-fit: cover;
       z-index: 1;
     }
+    .videoAR {
+      position: absolute;
+      width: 30%;
+      bottom: 10%;
+      display: none; /* ocultos al inicio */
+      z-index: 5;
+    }
+    #agresor { left: 5%; }
+    #victima { left: 35%; }
+    #testigo { right: 5%; }
   </style>
 </head>
 <body>
@@ -48,22 +64,44 @@
   <div id="instructionText">Junta los 3 cuadros</div>
   <video id="camera" autoplay playsinline muted></video>
 
+  <!-- Videos ocultos -->
+  <video id="agresor" class="videoAR" src="videos/agresor.mp4"></video>
+  <video id="victima" class="videoAR" src="videos/victima.mp4"></video>
+  <video id="testigo" class="videoAR" src="videos/testigo.mp4"></video>
+
   <script>
     const startButton = document.getElementById("startButton");
     const instructionText = document.getElementById("instructionText");
     const camera = document.getElementById("camera");
 
+    const agresor = document.getElementById("agresor");
+    const victima = document.getElementById("victima");
+    const testigo = document.getElementById("testigo");
+    const videos = [agresor, victima, testigo];
+
     startButton.addEventListener("click", async () => {
       try {
-        // Pedir acceso a la cámara
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        // Pedir acceso a la cámara TRASERA
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { exact: "environment" } }
+        });
         camera.srcObject = stream;
 
-        // Mostrar el texto después de iniciar cámara
+        // Mostrar texto
         instructionText.style.display = "block";
-
-        // Ocultar el botón de inicio
         startButton.style.display = "none";
+
+        // Cargar videos
+        videos.forEach(v => v.load());
+
+        // Simulación: cuando se detecten los 3 targets → mostrar y reproducir
+        setTimeout(() => {
+          videos.forEach(v => {
+            v.style.display = "block";
+            v.play();
+          });
+          instructionText.textContent = "¡Activado!";
+        }, 5000); // simula detección después de 5s
 
       } catch (error) {
         alert("No se pudo acceder a la cámara: " + error);
