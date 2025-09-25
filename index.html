@@ -2,93 +2,140 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>AR con 3D y Video</title>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/examples/js/loaders/GLTFLoader.js"></script>
+  <title>AR con Cámara, Videos y Modelo 3D</title>
   <style>
-    body { margin: 0; overflow: hidden; }
-    #ar-container { width: 100vw; height: 100vh; position: relative; }
-    #start-button {
-      position: absolute;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
+    body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; background: black; }
+    #startButton, #videoButton {
+      z-index: 10;
       padding: 15px 30px;
       font-size: 20px;
-      background: #000;
-      color: #fff;
+      background: #007bff;
+      color: white;
       border: none;
-      border-radius: 10px;
+      border-radius: 12px;
       cursor: pointer;
-      z-index: 10;
-    }
-    #mensaje {
       position: absolute;
-      top: 80px;
       left: 50%;
       transform: translateX(-50%);
-      font-size: 26px;
-      font-weight: bold;
-      color: white;
-      text-shadow: 2px 2px 5px black;
-      display: none;
+    }
+    #startButton { top: 20px; }
+    #videoButton { bottom: 20px; display: none; font-size: 24px; padding: 20px 40px; }
+    #instructionText {
+      position: absolute;
+      top: 80px;
+      width: 100%;
+      text-align: center;
       z-index: 10;
+      font-size: 24px;
+      font-weight: bold;
+      padding: 15px;
+      background: rgba(0,0,0,0.5);
+      color: white;
+      display: none;
+    }
+    video#camera {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+      z-index: 1;
+    }
+    video#mainVideo {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+      display: none;
+      z-index: 20;
     }
   </style>
 </head>
 <body>
-  <div id="ar-container"></div>
-  <button id="start-button">No todo es lo que parece</button>
-  <div id="mensaje">Junta los 3 cuadros</div>
+  <button id="startButton">Iniciar Cámara</button>
+  <div id="instructionText">Junta los 3 cuadros</div>
+  <button id="videoButton">No todo es lo que parece</button>
+  <video id="camera" autoplay playsinline muted></video>
+  <video id="mainVideo" src="videos/victima.mp4"></video>
 
-  <script>
-    document.querySelector("#start-button").addEventListener("click", async () => {
-      const startButton = document.querySelector("#start-button");
-      startButton.style.display = "none";
-      document.querySelector("#mensaje").style.display = "block";
+  <script type="module">
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.155/build/three.module.js';
+    import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.155/examples/jsm/loaders/GLTFLoader.js';
+    import { ARButton } from 'https://cdn.jsdelivr.net/npm/three@0.155/examples/jsm/webxr/ARButton.js';
 
-      // Inicializar AR
-      const mindarThree = new window.MINDAR.IMAGE.MindARThree({
-        container: document.querySelector("#ar-container"),
-        imageTargetSrc: "targets.mind" // asegúrate de incluir aquí tu archivo de targets
-      });
+    const startButton = document.getElementById("startButton");
+    const instructionText = document.getElementById("instructionText");
+    const videoButton = document.getElementById("videoButton");
+    const cameraView = document.getElementById("camera");
+    const mainVideo = document.getElementById("mainVideo");
 
-      const {renderer, scene, camera} = mindarThree;
+    let renderer, scene, camera, modelo;
 
-      // Luz
-      const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
-      scene.add(light);
+    startButton.addEventListener("click", async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { exact: "environment" } }
+        });
+        cameraView.srcObject = stream;
 
-      // Cargar modelo GLB
-      const loader = new THREE.GLTFLoader();
-      let modelo;
-      loader.load("models/pose_final_cuadro.glb", (gltf) => {
-        modelo = gltf.scene;
-        modelo.scale.set(0.5, 0.5, 0.5);
-        modelo.rotation.y = Math.PI; // 180 grados
-        modelo.position.set(0, 0, 0); // se ajusta para estar pegado al cuadro
-        modelo.visible = false;
-        scene.add(modelo);
-      });
+        instructionText.style.display = "block";
+        startButton.style.display = "none";
+        videoButton.style.display = "block";
 
-      // Anchor para el cuadro del medio (ej: víctima)
-      const anchor = mindarThree.addAnchor(0); // index del cuadro víctima en tu mind
-      anchor.onTargetFound = () => {
-        if (modelo) {
-          modelo.visible = true;
-        }
+        // Configuración AR
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.xr.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(
+          70,
+          window.innerWidth / window.innerHeight,
+          0.01,
+          20
+        );
+
+        const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+        scene.add(light);
+
+        const loader = new GLTFLoader();
+        loader.load("models/pose_final_cuadro.glb", (gltf) => {
+          modelo = gltf.scene;
+          modelo.scale.set(0.5, 0.5, 0.5);
+          modelo.visible = false; // se mostrará después del video
+          scene.add(modelo);
+        });
+
+        const arButton = ARButton.createButton(renderer);
+        document.body.appendChild(arButton);
+
+        renderer.setAnimationLoop(() => {
+          if (modelo) modelo.rotation.y += 0.005; // ligera rotación animada
+          renderer.render(scene, camera);
+        });
+
+      } catch (error) {
+        alert("No se pudo acceder a la cámara: " + error);
+      }
+    });
+
+    // Botón para reproducir el video con sonido
+    videoButton.addEventListener("click", () => {
+      instructionText.style.display = "none";
+      videoButton.style.display = "none";
+
+      mainVideo.style.display = "block";
+      mainVideo.play();
+
+      mainVideo.onended = () => {
+        mainVideo.style.display = "none";
+        if (modelo) modelo.visible = true; // mostrar el modelo 3D
+        instructionText.style.display = "block"; // vuelve el texto
       };
-      anchor.onTargetLost = () => {
-        if (modelo) {
-          modelo.visible = false;
-        }
-      };
-
-      await mindarThree.start();
-      renderer.setAnimationLoop(() => {
-        renderer.render(scene, camera);
-      });
     });
   </script>
 </body>
