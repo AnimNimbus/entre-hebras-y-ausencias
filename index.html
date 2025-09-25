@@ -50,13 +50,29 @@
         model = gltf.scene;
         model.scale.set(0.5, 0.5, 0.5);
         scene.add(model);
+
+        // Calcular bounding box del modelo para centrarlo
+        const box = new THREE.Box3().setFromObject(model);
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        const center = new THREE.Vector3();
+        box.getCenter(center);
+
+        // Mover modelo al centro
+        model.position.x += (model.position.x - center.x);
+        model.position.y += (model.position.y - center.y);
+        model.position.z += (model.position.z - center.z);
+
+        // Ajustar cámara para que se vea todo
+        const maxDim = Math.max(size.x, size.y, size.z);
+        camera.position.z = maxDim * 2;
       },
       (xhr) => {
         console.log(`Cargando: ${(xhr.loaded / xhr.total) * 100}%`);
       },
       (error) => {
         console.error("Error cargando el modelo:", error);
-        // Si falla, creamos un cubo para testear la escena
+        // Si falla, creamos un cubo verde
         const geometry = new THREE.BoxGeometry(1, 1, 1);
         const material = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
         model = new THREE.Mesh(geometry, material);
