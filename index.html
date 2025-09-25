@@ -2,98 +2,84 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Entre hebras y ausencias</title>
+  <title>Test Modelo 3D</title>
   <style>
     body {
       margin: 0;
       overflow: hidden;
       background: black;
-      font-family: Arial, sans-serif;
-    }
-    #startButton {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      z-index: 10;
-      padding: 20px 40px;
-      font-size: 24px;
-      background: #007bff;
-      color: white;
-      border: none;
-      border-radius: 16px;
-      cursor: pointer;
-    }
-    video#camera {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      object-fit: cover;
-      z-index: 1;
     }
     canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: 2;
+      display: block;
     }
   </style>
 </head>
 <body>
-  <button id="startButton">Iniciar Cámara</button>
-  <video id="camera" autoplay playsinline muted></video>
-
   <script type="module">
     import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.155/build/three.module.js';
     import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.155/examples/jsm/loaders/GLTFLoader.js';
 
-    const startButton = document.getElementById("startButton");
-    const cameraVideo = document.getElementById("camera");
-
     let scene, camera, renderer, model;
 
-    startButton.addEventListener("click", async () => {
-      startButton.style.display = "none";
+    // Escena
+    scene = new THREE.Scene();
 
-      try {
-        // Abrir cámara trasera
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { exact: "environment" } }
-        });
-        cameraVideo.srcObject = stream;
-      } catch (err) {
-        alert("No se pudo acceder a la cámara: " + err);
-      }
+    // Cámara
+    camera = new THREE.PerspectiveCamera(
+      70,
+      window.innerWidth / window.innerHeight,
+      0.01,
+      100
+    );
+    camera.position.z = 3;
 
-      // Inicializar three.js
-      scene = new THREE.Scene();
-      camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 100);
-      camera.position.z = 2;
+    // Renderizador
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
 
-      renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      document.body.appendChild(renderer.domElement);
+    // Luz
+    const light = new THREE.HemisphereLight(0xffffff, 0x444444, 2);
+    scene.add(light);
 
-      const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
-      scene.add(light);
-
-      // Cargar modelo GLB
-      const loader = new GLTFLoader();
-      loader.load("models/pose_final_cuadro.glb", (gltf) => {
+    // Loader del modelo
+    const loader = new GLTFLoader();
+    loader.load(
+      "models/pose_final_cuadro.glb",
+      (gltf) => {
         model = gltf.scene;
         model.scale.set(0.5, 0.5, 0.5);
         scene.add(model);
-      });
-
-      // Animar
-      function animate() {
-        requestAnimationFrame(animate);
-        if (model) model.rotation.y += 0.005; // giro suave
-        renderer.render(scene, camera);
+      },
+      (xhr) => {
+        console.log(`Cargando: ${(xhr.loaded / xhr.total) * 100}%`);
+      },
+      (error) => {
+        console.error("Error cargando el modelo:", error);
+        // Si falla, creamos un cubo para testear la escena
+        const geometry = new THREE.BoxGeometry(1, 1, 1);
+        const material = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+        model = new THREE.Mesh(geometry, material);
+        scene.add(model);
       }
-      animate();
+    );
+
+    // Animación
+    function animate() {
+      requestAnimationFrame(animate);
+      if (model) {
+        model.rotation.y += 0.01;
+        model.rotation.x += 0.005;
+      }
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // Ajustar al cambiar tamaño ventana
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
     });
   </script>
 </body>
