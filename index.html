@@ -119,14 +119,17 @@
         startButton.style.display = "none";
         instructionText.style.display = "block";
 
-        // Esperar 2 segundos antes de reproducir video
+        // Pre-cargar video
+        mainVideo.load();
+
+        // Esperar 4 segundos antes de reproducir video
         setTimeout(() => {
           instructionText.style.display = "none";
           mainVideo.style.display = "block";
           mainVideo.play().catch(err => {
             console.log("No se pudo reproducir el video automáticamente:", err);
           });
-        }, 2000);
+        }, 4000);
 
         // Cuando el video termine → mostrar modelo
         mainVideo.addEventListener("ended", () => {
