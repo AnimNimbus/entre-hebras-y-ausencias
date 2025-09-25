@@ -2,78 +2,26 @@
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <title>Visor GLB — GitHub Pages</title>
+  <title>Visor con model-viewer</title>
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
   <style>
-    body { margin:0; overflow:hidden; background:#111; }
-    canvas { display:block; }
+    body { margin: 0; background: #111; }
+    model-viewer {
+      width: 100vw;
+      height: 100vh;
+      background: #111;
+    }
   </style>
 </head>
 <body>
-<script type="module">
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.155/build/three.module.js';
-import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.155/examples/jsm/loaders/GLTFLoader.js';
-import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.155/examples/jsm/controls/OrbitControls.js';
-
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
-
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x222222);
-
-const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.01, 1000);
-camera.position.set(0, 1, 3);
-
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-
-scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1));
-const dir = new THREE.DirectionalLight(0xffffff, 1);
-dir.position.set(3, 5, 10);
-scene.add(dir);
-
-const loader = new GLTFLoader();
-
-// 👉 URL directa al GLB en tu repo
-const url = 'https://animnimbus.github.io/entre-hebras-y-ausencias/models/pose_final_cuadro.glb';
-
-loader.load(
-  url,
-  (gltf) => {
-    const model = gltf.scene;
-    scene.add(model);
-
-    // centrar y encuadrar modelo
-    const box = new THREE.Box3().setFromObject(model);
-    const size = box.getSize(new THREE.Vector3()).length();
-    const center = box.getCenter(new THREE.Vector3());
-
-    model.position.sub(center);
-
-    camera.near = size / 100;
-    camera.far = size * 100;
-    camera.updateProjectionMatrix();
-
-    camera.position.set(size/2, size/5, size/2);
-    controls.target.set(0, 0, 0);
-    controls.update();
-  },
-  undefined,
-  (err) => console.error('Error cargando GLB:', err)
-);
-
-function animate(){
-  requestAnimationFrame(animate);
-  controls.update();
-  renderer.render(scene, camera);
-}
-animate();
-
-window.addEventListener('resize', ()=>{
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
-</script>
+  <!-- 👇 Aquí solo cambias la URL del GLB -->
+  <model-viewer 
+    src="https://animnimbus.github.io/entre-hebras-y-ausencias/models/pose_final_cuadro.glb"
+    alt="Modelo 3D"
+    camera-controls
+    auto-rotate
+    ar
+    exposure="1.2">
+  </model-viewer>
 </body>
 </html>
