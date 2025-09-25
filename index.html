@@ -2,10 +2,16 @@
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <title>Visor con model-viewer</title>
+  <title>Visor 3D — Entre hebras y ausencias</title>
+
+  <!-- Importa model-viewer desde unpkg -->
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+
   <style>
-    body { margin: 0; background: #111; }
+    body {
+      margin: 0;
+      background: #111;
+    }
     model-viewer {
       width: 100vw;
       height: 100vh;
@@ -14,14 +20,16 @@
   </style>
 </head>
 <body>
-  <!-- 👇 Aquí solo cambias la URL del GLB -->
-  <model-viewer 
+  <!-- 👇 Cambia la URL si tu GLB está en otra carpeta -->
+  <model-viewer
     src="https://animnimbus.github.io/entre-hebras-y-ausencias/models/pose_final_cuadro.glb"
     alt="Modelo 3D"
     camera-controls
     auto-rotate
     ar
-    exposure="1.2">
+    shadow-intensity="1"
+    exposure="1.2"
+    interaction-prompt="none">
   </model-viewer>
 </body>
 </html>
