@@ -1,21 +1,22 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>AR con Cámara y Videos</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- MindAR + A-Frame -->
+  <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.2/dist/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar/dist/mindar-image-aframe.prod.js"></script>
+
   <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      font-family: Arial, sans-serif;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      background: black;
-    }
+    body, html { margin:0; padding:0; overflow:hidden; }
     #startButton {
-      z-index: 10;
+      z-index: 9999;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%,-50%);
       padding: 15px 30px;
       font-size: 20px;
       background: #007bff;
@@ -23,89 +24,95 @@
       border: none;
       border-radius: 12px;
       cursor: pointer;
-      position: absolute;
     }
     #instructionText {
       position: absolute;
-      bottom: 30px;
+      bottom: 20px;
       width: 100%;
       text-align: center;
-      z-index: 10;
+      z-index: 9999;
       font-size: 24px;
       font-weight: bold;
-      padding: 15px;
-      background: rgba(0,0,0,0.5);
       color: white;
-      display: none; /* oculto al inicio */
+      display: none;
+      background: rgba(0,0,0,0.5);
+      padding: 10px;
     }
-    video#camera {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      object-fit: cover;
-      z-index: 1;
-    }
-    .videoAR {
-      position: absolute;
-      width: 30%;
-      bottom: 10%;
-      display: none; /* ocultos al inicio */
-      z-index: 5;
-    }
-    #agresor { left: 5%; }
-    #victima { left: 35%; }
-    #testigo { right: 5%; }
   </style>
 </head>
 <body>
-  <button id="startButton">Iniciar Cámara</button>
+  <!-- Botón y texto -->
+  <button id="startButton">Iniciar cámara</button>
   <div id="instructionText">Junta los 3 cuadros</div>
-  <video id="camera" autoplay playsinline muted></video>
 
-  <!-- Videos ocultos -->
-  <video id="agresor" class="videoAR" src="videos/agresor.mp4"></video>
-  <video id="victima" class="videoAR" src="videos/victima.mp4"></video>
-  <video id="testigo" class="videoAR" src="videos/testigo.mp4"></video>
+  <!-- Escena AR -->
+  <a-scene
+    mindar-image="imageTargetSrc: targets/cuadros.mind; autoStart: false;"
+    color-space="sRGB"
+    embedded
+    renderer="colorManagement: true, physicallyCorrectLights"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false"
+  >
+    <a-assets>
+      <video id="videoAgresor" src="videos/agresor.mp4" playsinline crossorigin="anonymous"></video>
+      <video id="videoVictima" src="videos/victima.mp4" playsinline crossorigin="anonymous"></video>
+      <video id="videoTestigo" src="videos/testigo.mp4" playsinline crossorigin="anonymous"></video>
+    </a-assets>
+
+    <!-- Cada target (índices en el .mind) -->
+    <a-entity mindar-image-target="targetIndex: 0">
+      <a-plane src="#videoAgresor" position="0 0 0" height="0.7" width="1"></a-plane>
+    </a-entity>
+
+    <a-entity mindar-image-target="targetIndex: 1">
+      <a-plane src="#videoVictima" position="0 0 0" height="0.7" width="1"></a-plane>
+    </a-entity>
+
+    <a-entity mindar-image-target="targetIndex: 2">
+      <a-plane src="#videoTestigo" position="0 0 0" height="0.7" width="1"></a-plane>
+    </a-entity>
+
+    <a-camera position="0 0 0"></a-camera>
+  </a-scene>
 
   <script>
     const startButton = document.getElementById("startButton");
     const instructionText = document.getElementById("instructionText");
-    const camera = document.getElementById("camera");
 
-    const agresor = document.getElementById("agresor");
-    const victima = document.getElementById("victima");
-    const testigo = document.getElementById("testigo");
-    const videos = [agresor, victima, testigo];
+    const videoAgresor = document.getElementById("videoAgresor");
+    const videoVictima = document.getElementById("videoVictima");
+    const videoTestigo = document.getElementById("videoTestigo");
 
     startButton.addEventListener("click", async () => {
-      try {
-        // Pedir acceso a la cámara TRASERA
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { exact: "environment" } }
-        });
-        camera.srcObject = stream;
+      // Iniciar MindAR manualmente
+      const sceneEl = document.querySelector("a-scene");
+      const arSystem = sceneEl.systems["mindar-image-system"];
+      await arSystem.start();
 
-        // Mostrar texto
-        instructionText.style.display = "block";
-        startButton.style.display = "none";
+      startButton.style.display = "none";
+      instructionText.style.display = "block";
 
-        // Cargar videos
-        videos.forEach(v => v.load());
+      // cargar videos
+      videoAgresor.load();
+      videoVictima.load();
+      videoTestigo.load();
 
-        // Simulación: cuando se detecten los 3 targets → mostrar y reproducir
-        setTimeout(() => {
-          videos.forEach(v => {
-            v.style.display = "block";
+      // evento: cuando los 3 cuadros estén visibles → reproducir sincronizados
+      let visibles = {0:false,1:false,2:false};
+      sceneEl.addEventListener("targetFound", (e) => {
+        visibles[e.detail.targetIndex] = true;
+        if (visibles[0] && visibles[1] && visibles[2]) {
+          instructionText.textContent = "¡Activado!";
+          [videoAgresor, videoVictima, videoTestigo].forEach(v=>{
             v.play();
           });
-          instructionText.textContent = "¡Activado!";
-        }, 5000); // simula detección después de 5s
+        }
+      });
 
-      } catch (error) {
-        alert("No se pudo acceder a la cámara: " + error);
-      }
+      sceneEl.addEventListener("targetLost", (e) => {
+        visibles[e.detail.targetIndex] = false;
+      });
     });
   </script>
 </body>
