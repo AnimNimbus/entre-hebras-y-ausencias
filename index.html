@@ -2,96 +2,40 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Test Modelo 3D</title>
+  <title>Test Cubo Three.js</title>
   <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      background: black;
-    }
-    canvas {
-      display: block;
-    }
+    body { margin: 0; overflow: hidden; background: black; }
+    canvas { display: block; }
   </style>
 </head>
 <body>
   <script type="module">
     import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.155/build/three.module.js';
-    import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.155/examples/jsm/loaders/GLTFLoader.js';
 
-    let scene, camera, renderer, model;
-
-    // Escena
-    scene = new THREE.Scene();
-
-    // Cámara
-    camera = new THREE.PerspectiveCamera(
-      70,
-      window.innerWidth / window.innerHeight,
-      0.01,
-      100
-    );
+    let scene = new THREE.Scene();
+    let camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 100);
     camera.position.z = 3;
 
-    // Renderizador
-    renderer = new THREE.WebGLRenderer({ antialias: true });
+    let renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    // Luz
     const light = new THREE.HemisphereLight(0xffffff, 0x444444, 2);
     scene.add(light);
 
-    // Loader del modelo
-    const loader = new GLTFLoader();
-    loader.load(
-      "models/pose_final_cuadro.glb",
-      (gltf) => {
-        model = gltf.scene;
-        model.scale.set(0.5, 0.5, 0.5);
-        scene.add(model);
+    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    const material = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+    const cube = new THREE.Mesh(geometry, material);
+    scene.add(cube);
 
-        // Calcular bounding box del modelo para centrarlo
-        const box = new THREE.Box3().setFromObject(model);
-        const size = new THREE.Vector3();
-        box.getSize(size);
-        const center = new THREE.Vector3();
-        box.getCenter(center);
-
-        // Mover modelo al centro
-        model.position.x += (model.position.x - center.x);
-        model.position.y += (model.position.y - center.y);
-        model.position.z += (model.position.z - center.z);
-
-        // Ajustar cámara para que se vea todo
-        const maxDim = Math.max(size.x, size.y, size.z);
-        camera.position.z = maxDim * 2;
-      },
-      (xhr) => {
-        console.log(`Cargando: ${(xhr.loaded / xhr.total) * 100}%`);
-      },
-      (error) => {
-        console.error("Error cargando el modelo:", error);
-        // Si falla, creamos un cubo verde
-        const geometry = new THREE.BoxGeometry(1, 1, 1);
-        const material = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
-        model = new THREE.Mesh(geometry, material);
-        scene.add(model);
-      }
-    );
-
-    // Animación
     function animate() {
       requestAnimationFrame(animate);
-      if (model) {
-        model.rotation.y += 0.01;
-        model.rotation.x += 0.005;
-      }
+      cube.rotation.y += 0.01;
+      cube.rotation.x += 0.005;
       renderer.render(scene, camera);
     }
     animate();
 
-    // Ajustar al cambiar tamaño ventana
     window.addEventListener("resize", () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
