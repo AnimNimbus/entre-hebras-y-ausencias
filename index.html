@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <title>AR con Video + Modelo 3D</title>
-  <!-- model-viewer -->
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
   <style>
     body {
@@ -15,28 +14,28 @@
     }
     #startButton {
       z-index: 10;
-      padding: 18px 36px;
-      font-size: 22px;
+      padding: 20px 40px;
+      font-size: 28px;
       background: #007bff;
       color: white;
       border: none;
-      border-radius: 12px;
+      border-radius: 14px;
       cursor: pointer;
       position: absolute;
-      top: 40%;
+      top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
     }
     #instructionText {
       position: absolute;
-      bottom: 30px;
+      bottom: 40px;
       width: 100%;
       text-align: center;
       z-index: 10;
-      font-size: 22px;
+      font-size: 32px;   /* 🔹 más grande */
       font-weight: bold;
-      padding: 12px;
-      background: rgba(0,0,0,0.5);
+      padding: 20px;
+      background: rgba(0,0,0,0.6);
       color: white;
       display: none;
     }
@@ -55,23 +54,35 @@
       left: 0;
       width: 100vw;
       height: 100vh;
-      object-fit: cover; /* ocupa toda la pantalla */
+      object-fit: cover;
       z-index: 3;
       display: none;
+      transform-origin: center center;
+    }
+    /* 🔄 Si el dispositivo está en vertical, giramos el video */
+    @media screen and (orientation: portrait) {
+      video#mainVideo {
+        transform: rotate(90deg);
+        width: 100vh;
+        height: 100vw;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(90deg);
+      }
     }
     model-viewer {
       position: absolute;
       width: 100%;
       height: 100%;
-      z-index: 2;
-      background: transparent;
+      z-index: 4;
+      background-color: transparent !important;
       display: none;
     }
   </style>
 </head>
 <body>
   <button id="startButton">Iniciar Cámara</button>
-  <div id="instructionText">Gira tu pantalla</div>
+  <div id="instructionText">🔄 Gira tu pantalla</div>
   <video id="camera" autoplay playsinline muted></video>
 
   <!-- Video principal -->
@@ -82,12 +93,13 @@
     src="https://animnimbus.github.io/entre-hebras-y-ausencias/models/pose_final_cuadro.glb"
     alt="Modelo 3D"
     ar
-    ar-modes="webxr scene-viewer quick-look"
     camera-controls
     auto-rotate="false"
     shadow-intensity="1"
     exposure="1.2"
-    interaction-prompt="none">
+    interaction-prompt="none"
+    disable-zoom
+    style="--poster-color: transparent;">
   </model-viewer>
 
   <script>
@@ -99,24 +111,34 @@
 
     startButton.addEventListener("click", async () => {
       try {
-        // activar cámara trasera
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { exact: "environment" } }
-        });
+        let stream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "environment" }
+          });
+        } catch (err) {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        }
         camera.srcObject = stream;
 
-        instructionText.style.display = "block";
+        // Mostrar aviso
         startButton.style.display = "none";
+        instructionText.style.display = "block";
 
-        // tras 5s reproducir video
+        // Pre-cargar video
+        mainVideo.load();
+
+        // Después de 5s reproducir video
         setTimeout(() => {
           instructionText.style.display = "none";
           mainVideo.style.display = "block";
-          mainVideo.muted = false; // habilita audio
-          mainVideo.play().catch(err => console.log("Error video:", err));
+          mainVideo.muted = false;
+          mainVideo.play().catch(err => {
+            console.log("No se pudo reproducir automáticamente:", err);
+          });
         }, 5000);
 
-        // cuando termina video → mostrar modelo
+        // Cuando termine el video → mostrar modelo
         mainVideo.addEventListener("ended", () => {
           mainVideo.style.display = "none";
           viewer.style.display = "block";
