@@ -1,87 +1,105 @@
 <!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AR Videos</title>
-  <script src="https://cdn.jsdelivr.net/npm/aframe@1.5.0/dist/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-  <style>
-    body { margin: 0; overflow: hidden; }
-    #msg { 
-      position: absolute; top: 12px; left: 50%; 
-      transform: translateX(-50%); 
-      background: rgba(0,0,0,0.6); color: #fff; 
-      padding: 6px 12px; border-radius: 6px;
-      font-family: system-ui, sans-serif;
-    }
-  </style>
-</head>
-<body>
-  <div id="msg">Junta los 3 cuadros</div>
-
-  <a-scene mindar-image="imageTargetSrc: ./targets/victima.mind, ./targets/agresor.mind, ./targets/testigo.mind;" 
-           vr-mode-ui="enabled: false" 
-           device-orientation-permission-ui="enabled: false">
-    
-    <a-assets>
-      <video id="videoVictima" src="./videos/victima.mp4" preload="auto" crossorigin="anonymous" playsinline webkit-playsinline></video>
-      <video id="videoAgresor" src="./videos/agresor.mp4" preload="auto" crossorigin="anonymous" playsinline webkit-playsinline></video>
-      <video id="videoTestigo" src="./videos/testigo.mp4" preload="auto" crossorigin="anonymous" playsinline webkit-playsinline></video>
-    </a-assets>
-
-    <!-- Cuadro Victima -->
-    <a-entity mindar-image-target="targetIndex: 0">
-      <a-plane id="planeVictima" src="#videoVictima" position="0 0 0" height="0.7" width="1" visible="false"></a-plane>
-    </a-entity>
-
-    <!-- Cuadro Agresor -->
-    <a-entity mindar-image-target="targetIndex: 1">
-      <a-plane id="planeAgresor" src="#videoAgresor" position="0 0 0" height="0.7" width="1" visible="false"></a-plane>
-    </a-entity>
-
-    <!-- Cuadro Testigo -->
-    <a-entity mindar-image-target="targetIndex: 2">
-      <a-plane id="planeTestigo" src="#videoTestigo" position="0 0 0" height="0.7" width="1" visible="false"></a-plane>
-    </a-entity>
-
-    <a-camera position="0 0 0"></a-camera>
-  </a-scene>
-
-  <script>
-    const videos = {
-      0: document.querySelector("#videoVictima"),
-      1: document.querySelector("#videoAgresor"),
-      2: document.querySelector("#videoTestigo")
-    };
-
-    const planes = {
-      0: document.querySelector("#planeVictima"),
-      1: document.querySelector("#planeAgresor"),
-      2: document.querySelector("#planeTestigo")
-    };
-
-    let visibles = {0:false, 1:false, 2:false};
-
-    document.querySelector("a-scene").addEventListener("targetFound", e => {
-      const idx = e.detail.targetIndex;
-      visibles[idx] = true;
-
-      // si los 3 están visibles, arrancamos sincronizados
-      if (visibles[0] && visibles[1] && visibles[2]) {
-        Object.values(planes).forEach(p => p.setAttribute("visible", "true"));
-        Object.values(videos).forEach(v => {
-          v.currentTime = 0;
-          v.play();
-        });
-        document.getElementById("msg").innerText = "¡Activado!";
+<html>
+  <head>
+    <title>Videos sincronizados con mind-ar</title>
+    <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.0/dist/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+    <style>
+      body { margin: 0; overflow: hidden; }
+      #startButton {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        padding: 12px 20px;
+        background: #222;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        cursor: pointer;
+        z-index: 10;
       }
-    });
+    </style>
+  </head>
+  <body>
+    <button id="startButton">Iniciar Cámara</button>
 
-    document.querySelector("a-scene").addEventListener("targetLost", e => {
-      const idx = e.detail.targetIndex;
-      visibles[idx] = false;
-    });
-  </script>
-</body>
+    <a-scene
+      mindar-image="imageTargetSrc: ./victima.mind, ./agresor.mind, ./testigo.mind"
+      embedded
+      color-space="sRGB"
+      renderer="colorManagement: true, physicallyCorrectLights"
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: false"
+    >
+      <a-assets>
+        <video id="victimaVideo" src="victima.mp4" preload="auto" playsinline webkit-playsinline crossorigin="anonymous"></video>
+        <video id="agresorVideo" src="agresor.mp4" preload="auto" playsinline webkit-playsinline crossorigin="anonymous"></video>
+        <video id="testigoVideo" src="testigo.mp4" preload="auto" playsinline webkit-playsinline crossorigin="anonymous"></video>
+      </a-assets>
+
+      <!-- Target víctima -->
+      <a-entity mindar-image-target="targetIndex: 0">
+        <a-plane id="victimaPlane" src="#victimaVideo" position="0 0 0" height="1" width="1.5" visible="false"></a-plane>
+      </a-entity>
+
+      <!-- Target agresor -->
+      <a-entity mindar-image-target="targetIndex: 1">
+        <a-plane id="agresorPlane" src="#agresorVideo" position="0 0 0" height="1" width="1.5" visible="false"></a-plane>
+      </a-entity>
+
+      <!-- Target testigo -->
+      <a-entity mindar-image-target="targetIndex: 2">
+        <a-plane id="testigoPlane" src="#testigoVideo" position="0 0 0" height="1" width="1.5" visible="false"></a-plane>
+      </a-entity>
+
+      <a-camera position="0 0 0"></a-camera>
+    </a-scene>
+
+    <script>
+      document.querySelector('#startButton').addEventListener('click', () => {
+        document.querySelector('#startButton').style.display = 'none';
+        document.querySelector('a-scene').components['mindar-image'].start();
+
+        const planes = {
+          0: document.querySelector('#victimaPlane'),
+          1: document.querySelector('#agresorPlane'),
+          2: document.querySelector('#testigoPlane')
+        };
+
+        const videos = {
+          0: document.querySelector('#victimaVideo'),
+          1: document.querySelector('#agresorVideo'),
+          2: document.querySelector('#testigoVideo')
+        };
+
+        const sceneEl = document.querySelector('a-scene');
+        let visibles = {0: false, 1: false, 2: false};
+        let started = false; // para evitar que se reinicie varias veces
+
+        sceneEl.addEventListener("targetFound", (e) => {
+          const idx = e.detail.targetIndex;
+          visibles[idx] = true;
+
+          // cuando los 3 estén visibles a la vez y aún no haya iniciado
+          if (visibles[0] && visibles[1] && visibles[2] && !started) {
+            started = true;
+            // mostrar todos y reiniciar videos
+            [0,1,2].forEach(i => {
+              planes[i].setAttribute("visible", true);
+              videos[i].currentTime = 0;
+              videos[i].loop = false; // no repetir
+              videos[i].play();
+            });
+          }
+        });
+
+        sceneEl.addEventListener("targetLost", (e) => {
+          const idx = e.detail.targetIndex;
+          visibles[idx] = false;
+        });
+      });
+    </script>
+  </body>
 </html>
