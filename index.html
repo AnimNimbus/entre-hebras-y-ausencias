@@ -1,97 +1,70 @@
 <!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover" />
-  <title>Prueba Cámara — AR</title>
-  <style>
-    html,body { height:100%; margin:0; background:#000; color:#fff; font-family:system-ui,Arial; }
-    #app { width:100%; height:100%; display:flex; align-items:center; justify-content:center; position:relative; }
-    video#cam {
-      width:100%;
-      height:100%;
-      object-fit:cover;
-      -webkit-transform: scaleX(-1); /* opcional: espejo si quieres front cam */
-      transform: none;
-      display:none; /* se mostrará cuando haya stream */
-    }
-    #overlay {
-      position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:auto;
-      background: linear-gradient(0deg, rgba(0,0,0,0.45), rgba(0,0,0,0.25));
-      z-index:10;
-      flex-direction:column;
-      gap:12px;
-    }
-    button.cta {
-      background:#ff3b30; color:#fff; border:none; padding:14px 20px; border-radius:10px; font-size:18px;
-    }
-    #msg { font-size:14px; opacity:0.9; max-width:86%; text-align:center; }
-    #small { position:absolute; left:8px; bottom:8px; font-size:12px; color:#ddd; }
-  </style>
-</head>
-<body>
-  <div id="app">
-    <video id="cam" playsinline autoplay muted></video>
+<html>
+  <head>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.1.4/dist/mindar-image-aframe.prod.js"></script>
+    <style>
+      body { margin: 0; overflow: hidden; }
+      #instruction {
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 22px;
+        font-weight: bold;
+        color: white;
+        background: rgba(0,0,0,0.6);
+        padding: 10px 20px;
+        border-radius: 10px;
+        z-index: 9999;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Texto de instrucción -->
+    <div id="instruction">Junta los 3 cuadros</div>
 
-    <div id="overlay">
-      <div id="msg">Para iniciar la experiencia, permite el uso de la cámara.<br>Pulsa el botón para abrir el permiso.</div>
-      <button id="btnStart" class="cta">Iniciar cámara</button>
-      <div style="font-size:12px; opacity:0.9; margin-top:6px;">Si el permiso ya fue negado, revisa ajustes del navegador</div>
-    </div>
+    <!-- Escena AR -->
+    <a-scene
+      mindar-image="imageTargetSrc: ./targets/cuadros.mind;"
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: true"
+      embedded
+    >
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <div id="small">Si no ves la cámara, usa Chrome (Android) o Safari (iOS) y asegúrate de estar en HTTPS.</div>
-  </div>
+      <!-- Targets individuales -->
+      <a-entity mindar-image-target="targetIndex: 0" id="target-victima"></a-entity>
+      <a-entity mindar-image-target="targetIndex: 1" id="target-testigo"></a-entity>
+      <a-entity mindar-image-target="targetIndex: 2" id="target-agresor"></a-entity>
+    </a-scene>
 
-  <script>
-    const btn = document.getElementById('btnStart');
-    const overlay = document.getElementById('overlay');
-    const video = document.getElementById('cam');
-    const msg = document.getElementById('msg');
+    <script>
+      const victima = document.querySelector("#target-victima");
+      const testigo = document.querySelector("#target-testigo");
+      const agresor = document.querySelector("#target-agresor");
+      const instruction = document.getElementById("instruction");
 
-    async function startCamera() {
-      try {
-        // intentamos preferir la cámara trasera (environment). Si falla, usamos la default
-        let stream = null;
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } } });
-        } catch (err) {
-          // fallback
-          stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        }
+      let seenVictima = false;
+      let seenTestigo = false;
+      let seenAgresor = false;
 
-        // asignar stream al video
-        video.srcObject = stream;
-        video.onloadedmetadata = () => {
-          video.play().catch(()=>{}); // play() puede rechazar si no hubo gesto, pero lo llamamos tras click
-          video.style.display = 'block';
-          overlay.style.display = 'none';
-        };
-      } catch (err) {
-        console.error("Error al acceder a la cámara:", err);
-        if (err && err.name === 'NotAllowedError') {
-          msg.innerText = "Acceso denegado. Ve a ajustes del navegador y HABILITA la cámara para este sitio.";
-        } else if (err && err.name === 'NotFoundError') {
-          msg.innerText = "No se encontró cámara disponible en este dispositivo.";
-        } else {
-          msg.innerText = "No se pudo abrir la cámara. Prueba otro navegador (Chrome/Firefox/Safari) o revisa permisos.";
+      // Detectar aparición de cada target
+      victima.addEventListener("targetFound", () => { seenVictima = true; checkAll(); });
+      testigo.addEventListener("targetFound", () => { seenTestigo = true; checkAll(); });
+      agresor.addEventListener("targetFound", () => { seenAgresor = true; checkAll(); });
+
+      // Detectar cuando se pierden
+      victima.addEventListener("targetLost", () => { seenVictima = false; });
+      testigo.addEventListener("targetLost", () => { seenTestigo = false; });
+      agresor.addEventListener("targetLost", () => { seenAgresor = false; });
+
+      function checkAll() {
+        if (seenVictima && seenTestigo && seenAgresor) {
+          instruction.textContent = "¡Activado!";
+          instruction.style.background = "rgba(0, 150, 0, 0.8)";
         }
       }
-    }
-
-    btn.addEventListener('click', startCamera);
-
-    // Si ya se dio permiso antes, intentar auto-iniciar (no siempre funcionará sin gesto).
-    window.addEventListener('load', async () => {
-      if (navigator.permissions) {
-        try {
-          // chequea permiso (esto puede no estar disponible en Safari)
-          const p = await navigator.permissions.query({ name: 'camera' });
-          if (p.state === 'granted') {
-            startCamera();
-          }
-        } catch(e){}
-      }
-    });
-  </script>
-</body>
+    </script>
+  </body>
 </html>
