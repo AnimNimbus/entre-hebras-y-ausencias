@@ -1,172 +1,91 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <title>AR con Video + Modelo 3D (play 5s → GLB en AR)</title>
-
+  <meta charset="UTF-8">
+  <title>AR con Video + Modelo 3D</title>
   <!-- model-viewer -->
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
-
   <style>
-    html,body { height:100%; margin:0; background:#000; font-family: Arial, sans-serif; }
-    /* Cámara en vivo (fondo) */
-    video#camera {
-      position: absolute; inset: 0;
-      width:100vw; height:100vh; object-fit: cover;
-      z-index: 1;
-    }
-
-    /* Video principal que se reproduce (full screen) */
-    video#mainVideo {
-      position: absolute; inset: 0;
-      width:100vw; height:100vh; object-fit: cover;
-      z-index: 4;
-      display: none;
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      height: 100vh;
       background: black;
     }
-
-    /* model-viewer encima de la cámara; hidden inicialmente */
-    model-viewer#viewer {
-      position: absolute; inset: 0;
-      width:100%; height:100%;
-      z-index: 3;
-      display: none; /* se muestra tras el video o si AR falla como fallback */
-      background: transparent;
-      touch-action: none; /* deja que model-viewer capture gestos */
-    }
-
-    /* UI */
     #startButton {
-      position: absolute; z-index: 10; left:50%; top:40%;
-      transform: translate(-50%,-50%);
-      padding: 14px 22px; font-size:18px; background:#007bff; color:white; border:none; border-radius:10px;
+      z-index: 10;
+      padding: 20px 40px;
+      font-size: 28px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
     }
     #instructionText {
-      position: absolute; z-index: 10; left:50%; bottom: 6%;
-      transform: translateX(-50%);
-      padding: 10px 14px; background: rgba(0,0,0,0.5); color: #fff; border-radius:8px; display:none;
-      font-size:16px;
+      position: absolute;
+      bottom: 30px;
+      width: 100%;
+      text-align: center;
+      z-index: 10;
+      font-size: 24px;
+      font-weight: bold;
+      padding: 15px;
+      background: rgba(0,0,0,0.5);
+      color: white;
+      display: none;
     }
-
-    /* Botón para abrir AR si el intento automático falla */
-    #openARBtn {
-      position: absolute; z-index: 10; right: 12px; top: 12px;
-      padding: 8px 12px; border-radius:8px; background:#28a745; color:#fff; border:none; display:none;
+    video#camera {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+      z-index: 1;
+    }
+    video#mainVideo {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+      z-index: 3;
+      display: none; /* oculto hasta activarse */
+    }
+    model-viewer {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
+      background: transparent;
+      display: none; /* oculto al inicio */
     }
   </style>
 </head>
 <body>
-
   <button id="startButton">Iniciar Cámara</button>
-  <div id="instructionText">Alinea los cuadros. El video iniciará en 5s.</div>
-  <button id="openARBtn">Abrir AR</button>
-
-  <!-- Cámara en vivo -->
+  <div id="instructionText">Junta los 3 cuadros</div>
   <video id="camera" autoplay playsinline muted></video>
 
-  <!-- Video que se reproduce después (victima.mp4 en tu carpeta videos/) -->
+  <!-- Video principal -->
   <video id="mainVideo" src="videos/victima.mp4" playsinline></video>
 
-  <!-- Modelo 3D (cambia la URL si hace falta) -->
+  <!-- Modelo 3D -->
   <model-viewer id="viewer"
     src="https://animnimbus.github.io/entre-hebras-y-ausencias/models/pose_final_cuadro.glb"
     alt="Modelo 3D"
     ar
-    ar-modes="webxr scene-viewer quick-look"
     camera-controls
     auto-rotate="false"
-    interaction-prompt="auto"
-    style="display:none;">
+    shadow-intensity="1"
+    exposure="1.2"
+    interaction-prompt="none"
+    disable-zoom>
   </model-viewer>
-
-  <script>
-    const startButton = document.getElementById('startButton');
-    const instructionText = document.getElementById('instructionText');
-    const camera = document.getElementById('camera');
-    const mainVideo = document.getElementById('mainVideo');
-    const viewer = document.getElementById('viewer');
-    const openARBtn = document.getElementById('openARBtn');
-
-    let videoTriggered = false;
-    let arOpened = false;
-
-    // Inicia cámara (user gesture garantizado por el click)
-    startButton.addEventListener('click', async () => {
-      try {
-        // Intentamos la cámara trasera, pero sin 'exact' (más compatible)
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: "environment" } },
-          audio: false
-        });
-        camera.srcObject = stream;
-
-        // UI
-        instructionText.style.display = 'block';
-        startButton.style.display = 'none';
-
-        // Espera 5s (simula la detección) y luego reproduce el video
-        setTimeout(() => {
-          instructionText.textContent = 'Reproduciendo video...';
-          mainVideo.style.display = 'block';
-          // reproducir; el click inicial permite reproducción con audio si el video lo tiene
-          mainVideo.play().catch(e => {
-            console.warn('No se pudo reproducir automáticamente el video:', e);
-            // si falla la reproducción automática, dejar un aviso
-            instructionText.textContent = 'Toca para reproducir el video';
-          });
-        }, 5000);
-
-      } catch (err) {
-        alert('No se pudo acceder a la cámara: ' + err.message);
-        console.error(err);
-      }
-    });
-
-    // Al terminar el video → mostrar / intentar AR con el modelo
-    mainVideo.addEventListener('ended', async () => {
-      mainVideo.style.display = 'none';
-      instructionText.textContent = 'Mostrando modelo...';
-
-      // mostrar el viewer como fallback visual (overlay)
-      viewer.style.display = 'block';
-      viewer.style.pointerEvents = 'auto'; // permitir gestos táctiles
-
-      // Intenta entrar en AR automáticamente (puede fallar según permisos/dispositivo)
-      try {
-        // enterAR() suele requerir user activation; como hubo un click inicial y un play, puede funcionar
-        await viewer.enterAR();
-        arOpened = true;
-        instructionText.textContent = 'Modo AR activado. Mueve el dispositivo para ver el objeto.';
-        // ocultar el botón porque ya estamos en AR
-        openARBtn.style.display = 'none';
-      } catch (err) {
-        console.warn('Entrada automática a AR falló o no soportada:', err);
-        instructionText.textContent = 'Toca y arrastra para explorar el modelo. Pulsa "Abrir AR" para colocarlo en el mundo.';
-        // mostrar botón para permitir al usuario abrir AR manualmente
-        openARBtn.style.display = 'block';
-      }
-    });
-
-    // Botón para abrir AR manualmente (fallback)
-    openARBtn.addEventListener('click', async () => {
-      try {
-        await viewer.enterAR();
-        arOpened = true;
-        openARBtn.style.display = 'none';
-        instructionText.textContent = 'Modo AR activado. Mueve el dispositivo para ver el objeto.';
-      } catch (err) {
-        alert('No se pudo abrir AR: ' + err.message);
-        console.error(err);
-      }
-    });
-
-    // (Opcional) si quieres ocultar la instrucción después de unos segundos en AR/inline
-    viewer.addEventListener('load', () => {
-      // el viewer cargó el modelo
-      console.log('Modelo cargado en model-viewer');
-    });
-
-    // Si el usuario desea cerrar AR o volver, puedes añadir controles adicionales según necesidad.
-  </script>
-</body>
-</html>
