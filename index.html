@@ -64,7 +64,7 @@
       width: 100%;
       height: 100%;
       z-index: 4;
-      background-color: transparent !important; /* transparente */
+      background-color: transparent !important;
       display: none; /* oculto al inicio */
     }
   </style>
@@ -75,7 +75,7 @@
   <video id="camera" autoplay playsinline muted></video>
 
   <!-- Video principal -->
-  <video id="mainVideo" src="videos/victima.mp4" playsinline></video>
+  <video id="mainVideo" src="videos/victima.mp4" playsinline muted></video>
 
   <!-- Modelo 3D -->
   <model-viewer id="viewer"
@@ -100,7 +100,7 @@
 
     startButton.addEventListener("click", async () => {
       try {
-        // Intentar primero con cámara trasera, si no, usar la disponible
+        // Activar cámara
         let stream;
         try {
           stream = await navigator.mediaDevices.getUserMedia({
@@ -115,11 +115,16 @@
         startButton.style.display = "none";
         instructionText.style.display = "block";
 
-        // Después de 5 segundos quitar texto y reproducir video
+        // Pre-cargar video para desbloquear autoplay
+        mainVideo.load();
+
+        // Después de 5 segundos reproducir el video
         setTimeout(() => {
           instructionText.style.display = "none";
           mainVideo.style.display = "block";
-          mainVideo.play();
+          mainVideo.play().catch(err => {
+            console.log("No se pudo reproducir el video automáticamente:", err);
+          });
         }, 5000);
 
         // Cuando el video termine → mostrar modelo
