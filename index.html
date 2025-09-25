@@ -33,9 +33,9 @@
       width: 100%;
       text-align: center;
       z-index: 10;
-      font-size: 30px;
+      font-size: 28px;
       font-weight: bold;
-      padding: 18px;
+      padding: 15px;
       background: rgba(0,0,0,0.6);
       color: white;
       display: none;
@@ -53,9 +53,11 @@
       position: absolute;
       top: 0;
       left: 0;
-      width: 100vw;
-      height: 100vh;
-      object-fit: contain; /* 🔹 se adapta mejor a 1920x1080 */
+      width: 100vh;   /* usamos altura como ancho */
+      height: 100vw;  /* usamos ancho como alto */
+      object-fit: cover;
+      transform: rotate(90deg) translateY(-100%);
+      transform-origin: top left;
       background: black;
       z-index: 3;
       display: none; /* oculto hasta activarse */
@@ -65,32 +67,33 @@
       width: 100%;
       height: 100%;
       z-index: 4;
-      background: black; /* 🔹 fondo sólido */
+      background-color: transparent !important;
       display: none; /* oculto al inicio */
     }
   </style>
 </head>
 <body>
   <button id="startButton">Iniciar Cámara</button>
-  <div id="instructionText">Gira tu pantalla</div>
+  <div id="instructionText">📱 Gira tu pantalla</div>
   <video id="camera" autoplay playsinline muted></video>
 
   <!-- Video principal -->
   <video id="mainVideo" src="videos/victima.mp4" playsinline muted></video>
 
-  <!-- Modelo 3D -->
+  <!-- Modelo 3D en AR -->
   <model-viewer id="viewer"
     src="https://animnimbus.github.io/entre-hebras-y-ausencias/models/pose_final_cuadro.glb"
     alt="Modelo 3D"
     ar
+    ar-modes="webxr scene-viewer quick-look"
     camera-controls
     auto-rotate="false"
-    shadow-intensity="1"
-    exposure="1.2"
+    shadow-intensity="2"
+    shadow-softness="0.5"
+    exposure="0.8"
     environment-image="neutral"
-    interaction-prompt="none"
     disable-zoom
-    style="--poster-color: transparent; transform: scale(1.5);"> <!-- 🔹 Ajusta scale a lo que necesites -->
+    style="--poster-color: transparent;">
   </model-viewer>
 
   <script>
@@ -124,13 +127,14 @@
         setTimeout(() => {
           instructionText.style.display = "none";
           mainVideo.style.display = "block";
-          mainVideo.muted = false; // 🔹 habilita audio al estar user-gesture
+          // Quitar mute porque ya hubo interacción del usuario
+          mainVideo.muted = false;
           mainVideo.play().catch(err => {
             console.log("No se pudo reproducir el video automáticamente:", err);
           });
         }, 5000);
 
-        // Cuando el video termine → mostrar modelo
+        // Cuando el video termine → mostrar modelo AR
         mainVideo.addEventListener("ended", () => {
           mainVideo.style.display = "none";
           viewer.style.display = "block";
