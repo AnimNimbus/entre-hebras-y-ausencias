@@ -15,12 +15,12 @@
     }
     #startButton {
       z-index: 10;
-      padding: 20px 40px;
-      font-size: 28px;
+      padding: 18px 36px;
+      font-size: 22px;
       background: #007bff;
       color: white;
       border: none;
-      border-radius: 15px;
+      border-radius: 12px;
       cursor: pointer;
       position: absolute;
       top: 40%;
@@ -33,7 +33,7 @@
       width: 100%;
       text-align: center;
       z-index: 10;
-      font-size: 22px;
+      font-size: 20px;
       font-weight: bold;
       padding: 12px;
       background: rgba(0,0,0,0.5);
@@ -60,9 +60,9 @@
       display: none; /* oculto hasta activarse */
     }
     model-viewer {
+      position: absolute;
       width: 100%;
       height: 100%;
-      position: absolute;
       z-index: 2;
       background: transparent;
       display: none; /* oculto al inicio */
@@ -77,20 +77,18 @@
   <!-- Video principal -->
   <video id="mainVideo" src="videos/victima.mp4" playsinline></video>
 
-  <!-- Modelo 3D en AR -->
+  <!-- Modelo 3D -->
   <model-viewer id="viewer"
     src="https://animnimbus.github.io/entre-hebras-y-ausencias/models/pose_final_cuadro.glb"
     alt="Modelo 3D"
     ar
     ar-modes="webxr scene-viewer quick-look"
-    ar-scale="fixed"
     camera-controls
     auto-rotate="false"
     shadow-intensity="1"
     exposure="1.2"
     interaction-prompt="none"
-    disable-zoom
-    style="--poster-color: transparent;">
+    disable-zoom>
   </model-viewer>
 
   <script>
@@ -102,7 +100,7 @@
 
     startButton.addEventListener("click", async () => {
       try {
-        // Acceso a la cámara trasera
+        // Activa la cámara trasera
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: { exact: "environment" } }
         });
@@ -111,19 +109,19 @@
         instructionText.style.display = "block";
         startButton.style.display = "none";
 
-        // Reproduce el video después de 5 segundos
+        // 🔹 Después de 5 segundos → reproducir video con sonido
         setTimeout(() => {
           instructionText.textContent = "¡Cuadros detectados!";
           mainVideo.style.display = "block";
-          mainVideo.play();
+          mainVideo.muted = false; // quitar silencio
+          mainVideo.play().catch(err => console.log("Error al reproducir:", err));
         }, 5000);
 
-        // Cuando termina el video, activar AR
+        // 🔹 Cuando termine el video → mostrar modelo
         mainVideo.addEventListener("ended", () => {
           mainVideo.style.display = "none";
           viewer.style.display = "block";
-          instructionText.textContent = "Explora el modelo";
-          viewer.activateAR(); // 🚀 abre el modelo en AR
+          instructionText.textContent = "Explora el modelo en AR";
         });
 
       } catch (error) {
