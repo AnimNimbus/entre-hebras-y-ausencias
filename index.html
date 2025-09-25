@@ -2,135 +2,100 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>AR con Cámara, Videos y Modelo 3D</title>
-  <!-- model-viewer -->
-  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <title>Detección de 3 cuadros con MindAR</title>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar/dist/mindar-image-three.prod.js"></script>
+  <script type="module">
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.155/build/three.module.js';
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const mindarThree = new window.MINDAR.IMAGE.MindARThree({
+        container: document.body,
+        imageTargetSrc: [
+          "targets/victima.mind",
+          "targets/agresor.mind",
+          "targets/testigo.mind"
+        ]
+      });
+
+      const {renderer, scene, camera} = mindarThree;
+
+      const anchorVictima = mindarThree.addAnchor(0);
+      const anchorAgresor = mindarThree.addAnchor(1);
+      const anchorTestigo = mindarThree.addAnchor(2);
+
+      let visibles = {victima: false, agresor: false, testigo: false};
+      let videoActivado = false;
+
+      function checkAllVisible() {
+        return visibles.victima && visibles.agresor && visibles.testigo;
+      }
+
+      // === DETECCIÓN DE CADA CUADRO ===
+      anchorVictima.onTargetFound = () => {visibles.victima = true; if (checkAllVisible()) activarVideo();}
+      anchorAgresor.onTargetFound = () => {visibles.agresor = true; if (checkAllVisible()) activarVideo();}
+      anchorTestigo.onTargetFound = () => {visibles.testigo = true; if (checkAllVisible()) activarVideo();}
+
+      anchorVictima.onTargetLost = () => {visibles.victima = false;}
+      anchorAgresor.onTargetLost = () => {visibles.agresor = false;}
+      anchorTestigo.onTargetLost = () => {visibles.testigo = false;}
+
+      async function start() {
+        await mindarThree.start();
+        renderer.setAnimationLoop(() => {
+          renderer.render(scene, camera);
+        });
+      }
+      start();
+
+      function activarVideo(){
+        if (videoActivado) return;
+        videoActivado = true;
+
+        const video = document.getElementById("video");
+        video.style.display = "block";
+        video.play();
+
+        video.onended = () => {
+          video.style.display = "none";
+          document.getElementById("modelo").style.display = "block";
+        };
+      }
+    });
+  </script>
   <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      font-family: Arial, sans-serif;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      background: black;
-    }
-    #startButton {
+    body {margin:0; overflow:hidden; background:black;}
+    video {
+      position: absolute;
+      top: 10%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80%;
+      display: none;
       z-index: 10;
-      padding: 15px 30px;
-      font-size: 20px;
-      background: #007bff;
-      color: white;
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      position: absolute;
     }
-    #instructionText {
-      position: absolute;
-      bottom: 30px;
-      width: 100%;
-      text-align: center;
-      z-index: 10;
-      font-size: 24px;
-      font-weight: bold;
-      padding: 15px;
-      background: rgba(0,0,0,0.5);
-      color: white;
-      display: none; /* oculto al inicio */
-    }
-    video#camera {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      object-fit: cover;
-      z-index: 1;
-    }
-    .videoAR {
-      position: absolute;
-      width: 30%;
-      bottom: 10%;
-      display: none; /* ocultos al inicio */
-      z-index: 5;
-    }
-    #agresor { left: 5%; }
-    #victima { left: 35%; }
-    #testigo { right: 5%; }
     model-viewer {
       position: absolute;
       width: 100%;
       height: 100%;
-      z-index: 2; /* sobre la cámara, bajo los botones */
-      background: transparent;
+      display: none;
+      z-index: 5;
     }
   </style>
+  <!-- model-viewer -->
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
 </head>
 <body>
-  <button id="startButton">Iniciar Cámara</button>
-  <div id="instructionText">Junta los 3 cuadros</div>
-  <video id="camera" autoplay playsinline muted></video>
+  <!-- Video que se muestra cuando se detecten los 3 cuadros -->
+  <video id="video" src="videos/victima.mp4" playsinline></video>
 
-  <!-- Modelo 3D -->
-  <model-viewer id="viewer"
-    src="https://animnimbus.github.io/entre-hebras-y-ausencias/models/pose_final_cuadro.glb"
-    alt="Modelo 3D"
-    ar
+  <!-- Modelo 3D que aparece al terminar el video -->
+  <model-viewer id="modelo"
+    src="modelos/escena.glb"
     camera-controls
-    auto-rotate="false"
-    shadow-intensity="1"
-    exposure="1.2"
-    interaction-prompt="none"
     disable-zoom
-    style="pointer-events: none;">
+    auto-rotate="false"
+    ar
+    style="display:none;">
   </model-viewer>
-
-  <!-- Videos ocultos -->
-  <video id="agresor" class="videoAR" src="videos/agresor.mp4"></video>
-  <video id="victima" class="videoAR" src="videos/victima.mp4"></video>
-  <video id="testigo" class="videoAR" src="videos/testigo.mp4"></video>
-
-  <script>
-    const startButton = document.getElementById("startButton");
-    const instructionText = document.getElementById("instructionText");
-    const camera = document.getElementById("camera");
-    const viewer = document.getElementById("viewer");
-
-    const agresor = document.getElementById("agresor");
-    const victima = document.getElementById("victima");
-    const testigo = document.getElementById("testigo");
-    const videos = [agresor, victima, testigo];
-
-    startButton.addEventListener("click", async () => {
-      try {
-        // Pedir acceso a la cámara TRASERA
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { exact: "environment" } }
-        });
-        camera.srcObject = stream;
-
-        // Mostrar texto
-        instructionText.style.display = "block";
-        startButton.style.display = "none";
-
-        // Cargar videos
-        videos.forEach(v => v.load());
-
-        // Simulación: después de 5s mostrar videos
-        setTimeout(() => {
-          videos.forEach(v => {
-            v.style.display = "block";
-            v.play();
-          });
-          instructionText.textContent = "¡Activado!";
-        }, 5000);
-
-      } catch (error) {
-        alert("No se pudo acceder a la cámara: " + error);
-      }
-    });
-  </script>
 </body>
 </html>
