@@ -5,18 +5,30 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover" />
   <title>Experiencia AR</title>
   <style>
-    html, body { margin:0; height:100%; overflow:hidden; background:#000; color:#fff; font-family:Arial, sans-serif; }
+    html, body {
+      margin:0; padding:0;
+      height:100%; width:100%;
+      overflow:hidden;
+      background:#000; color:#fff;
+      font-family:Arial, sans-serif;
+    }
     #overlay {
-      position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
-      background:rgba(0,0,0,0.7); z-index:10; gap:15px; text-align:center;
+      position:absolute; inset:0;
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      background:rgba(0,0,0,0.7);
+      z-index:10; gap:15px; text-align:center;
     }
     #btnStart {
-      background:#ff3b30; color:#fff; border:none; padding:14px 20px; border-radius:10px; font-size:18px;
+      background:#ff3b30; color:#fff;
+      border:none; padding:14px 20px;
+      border-radius:10px; font-size:18px;
     }
     #texto {
-      position:absolute; top:20px; width:100%; text-align:center;
-      font-size:22px; font-weight:bold; color:#00ffcc; display:none;
-      text-shadow:0 0 6px #000;
+      position:absolute; top:20px; left:0; right:0;
+      text-align:center;
+      font-size:22px; font-weight:bold; color:#00ffcc;
+      display:none; text-shadow:0 0 6px #000;
       z-index:5;
     }
     video.hidden { display:none; }
@@ -60,6 +72,7 @@
 
       const {renderer, scene, camera} = mindarThree;
 
+      // Cargar videos
       const vAgresor = document.getElementById("videoAgresor");
       const vVictima = document.getElementById("videoVictima");
       const vTestigo = document.getElementById("videoTestigo");
@@ -91,7 +104,6 @@
 
       function checkAll() {
         if (detected.every(d => d)) {
-          // Reiniciar y reproducir sincronizados
           [vAgresor, vVictima, vTestigo].forEach(v => {
             v.currentTime = 0;
             v.play();
