@@ -1,121 +1,134 @@
 <!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="utf-8" />
-    <title>Videos sincronizados con MindAR</title>
-    <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.0/dist/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-    <style>
-      body { margin: 0; overflow: hidden; }
-      #startButton {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        padding: 14px 24px;
-        background: #ff3b30;
-        color: #fff;
-        border: none;
-        border-radius: 10px;
-        font-size: 18px;
-        font-weight: bold;
-        cursor: pointer;
-        z-index: 10;
+<head>
+  <meta charset="utf-8" />
+  <title>Videos sincronizados con MindAR</title>
+  <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.0/dist/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+  <style>
+    body { margin: 0; overflow: hidden; }
+
+    /* Botón centrado y grande */
+    #startButton {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 20px 32px;
+      background: #ff3b30;
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 22px;
+      font-weight: bold;
+      cursor: pointer;
+      z-index: 10;
+    }
+
+    /* Forzamos el canvas de MindAR */
+    canvas {
+      width: 100% !important;
+      height: 100% !important;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+  </style>
+</head>
+<body>
+  <button id="startButton">Iniciar cámara</button>
+
+  <a-scene
+    mindar-image="imageTargetSrc: ./targets/victima.mind, ./targets/agresor.mind, ./targets/testigo.mind; filterMinCF:0.0001; filterBeta: 0.001;"
+    embedded
+    color-space="sRGB"
+    renderer="colorManagement: true, physicallyCorrectLights"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false"
+  >
+    <a-assets>
+      <video id="victimaVideo" src="./videos/victima.mp4" preload="auto" playsinline webkit-playsinline crossorigin="anonymous"></video>
+      <video id="agresorVideo" src="./videos/agresor.mp4" preload="auto" playsinline webkit-playsinline crossorigin="anonymous"></video>
+      <video id="testigoVideo" src="./videos/testigo.mp4" preload="auto" playsinline webkit-playsinline crossorigin="anonymous"></video>
+    </a-assets>
+
+    <!-- Target víctima -->
+    <a-entity mindar-image-target="targetIndex: 0">
+      <a-plane id="victimaPlane" src="#victimaVideo" position="0 0 0" height="1" width="1.5" rotation="0 0 0" visible="false"></a-plane>
+    </a-entity>
+
+    <!-- Target agresor -->
+    <a-entity mindar-image-target="targetIndex: 1">
+      <a-plane id="agresorPlane" src="#agresorVideo" position="0 0 0" height="1" width="1.5" rotation="0 0 0" visible="false"></a-plane>
+    </a-entity>
+
+    <!-- Target testigo -->
+    <a-entity mindar-image-target="targetIndex: 2">
+      <a-plane id="testigoPlane" src="#testigoVideo" position="0 0 0" height="1" width="1.5" rotation="0 0 0" visible="false"></a-plane>
+    </a-entity>
+
+    <a-camera position="0 0 0"></a-camera>
+  </a-scene>
+
+  <script>
+    const startButton = document.querySelector('#startButton');
+    const sceneEl = document.querySelector('a-scene');
+
+    const planes = {
+      0: document.querySelector('#victimaPlane'),
+      1: document.querySelector('#agresorPlane'),
+      2: document.querySelector('#testigoPlane')
+    };
+
+    const videos = {
+      0: document.querySelector('#victimaVideo'),
+      1: document.querySelector('#agresorVideo'),
+      2: document.querySelector('#testigoVideo')
+    };
+
+    let visibles = {0: false, 1: false, 2: false};
+    let started = false;
+
+    startButton.addEventListener('click', async () => {
+      startButton.style.display = 'none';
+
+      // Desbloqueamos autoplay
+      Object.values(videos).forEach(v => {
+        v.muted = true;
+        v.play().catch(()=>{});
+        v.pause();
+      });
+
+      // Forzamos MindAR a usar la cámara trasera
+      const system = sceneEl.systems['mindar-image-system'];
+      if (system) {
+        await system.start({ video: { facingMode: { ideal: "environment" } } });
       }
-    </style>
-  </head>
-  <body>
-    <button id="startButton">Iniciar cámara</button>
+    });
 
-    <a-scene
-      mindar-image="imageTargetSrc: ./targets/victima.mind, ./targets/agresor.mind, ./targets/testigo.mind; filterMinCF:0.0001; filterBeta: 0.001;"
-      embedded
-      color-space="sRGB"
-      renderer="colorManagement: true, physicallyCorrectLights"
-      vr-mode-ui="enabled: false"
-      device-orientation-permission-ui="enabled: false"
-    >
-      <a-assets>
-        <video id="victimaVideo" src="./videos/victima.mp4" preload="auto" playsinline webkit-playsinline crossorigin="anonymous"></video>
-        <video id="agresorVideo" src="./videos/agresor.mp4" preload="auto" playsinline webkit-playsinline crossorigin="anonymous"></video>
-        <video id="testigoVideo" src="./videos/testigo.mp4" preload="auto" playsinline webkit-playsinline crossorigin="anonymous"></video>
-      </a-assets>
+    // Cuando encuentra un target
+    sceneEl.addEventListener("targetFound", (e) => {
+      const idx = e.detail.targetIndex;
+      visibles[idx] = true;
 
-      <!-- Target víctima -->
-      <a-entity mindar-image-target="targetIndex: 0">
-        <a-plane id="victimaPlane" src="#victimaVideo" position="0 0 0" height="1" width="1.5" visible="false"></a-plane>
-      </a-entity>
+      // Si los 3 están visibles y aún no se lanzó
+      if (visibles[0] && visibles[1] && visibles[2] && !started) {
+        started = true;
 
-      <!-- Target agresor -->
-      <a-entity mindar-image-target="targetIndex: 1">
-        <a-plane id="agresorPlane" src="#agresorVideo" position="0 0 0" height="1" width="1.5" visible="false"></a-plane>
-      </a-entity>
-
-      <!-- Target testigo -->
-      <a-entity mindar-image-target="targetIndex: 2">
-        <a-plane id="testigoPlane" src="#testigoVideo" position="0 0 0" height="1" width="1.5" visible="false"></a-plane>
-      </a-entity>
-
-      <a-camera position="0 0 0"></a-camera>
-    </a-scene>
-
-    <script>
-      const startButton = document.querySelector('#startButton');
-      const sceneEl = document.querySelector('a-scene');
-
-      const planes = {
-        0: document.querySelector('#victimaPlane'),
-        1: document.querySelector('#agresorPlane'),
-        2: document.querySelector('#testigoPlane')
-      };
-
-      const videos = {
-        0: document.querySelector('#victimaVideo'),
-        1: document.querySelector('#agresorVideo'),
-        2: document.querySelector('#testigoVideo')
-      };
-
-      let visibles = {0: false, 1: false, 2: false};
-      let started = false;
-
-      startButton.addEventListener('click', async () => {
-        startButton.style.display = 'none';
-
-        // Forzar desbloqueo de autoplay
-        Object.values(videos).forEach(v => {
-          v.muted = true;
-          v.play();
-          v.pause();
+        [0,1,2].forEach(i => {
+          planes[i].setAttribute("visible", true);
+          videos[i].muted = false;
+          videos[i].currentTime = 0;
+          videos[i].loop = false;
+          videos[i].play();
         });
+      }
+    });
 
-        // Forzar MindAR a usar cámara trasera
-        const system = sceneEl.systems['mindar-image-system'];
-        if (system) {
-          await system.start({ video: { facingMode: { ideal: "environment" } } });
-        }
-      });
-
-      sceneEl.addEventListener("targetFound", (e) => {
-        const idx = e.detail.targetIndex;
-        visibles[idx] = true;
-
-        if (visibles[0] && visibles[1] && visibles[2] && !started) {
-          started = true;
-
-          [0,1,2].forEach(i => {
-            planes[i].setAttribute("visible", true);
-            videos[i].muted = false;
-            videos[i].currentTime = 0;
-            videos[i].loop = false;
-            videos[i].play();
-          });
-        }
-      });
-
-      sceneEl.addEventListener("targetLost", (e) => {
-        const idx = e.detail.targetIndex;
-        visibles[idx] = false;
-      });
-    </script>
-  </body>
+    sceneEl.addEventListener("targetLost", (e) => {
+      const idx = e.detail.targetIndex;
+      visibles[idx] = false;
+    });
+  </script>
+</body>
 </html>
