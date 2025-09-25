@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>AR con Video + Modelo 3D</title>
+  <!-- model-viewer -->
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
   <style>
     body {
@@ -28,13 +29,13 @@
     }
     #instructionText {
       position: absolute;
-      bottom: 40px;
+      bottom: 30px;
       width: 100%;
       text-align: center;
       z-index: 10;
-      font-size: 32px;   /* 🔹 más grande */
+      font-size: 30px;
       font-weight: bold;
-      padding: 20px;
+      padding: 18px;
       background: rgba(0,0,0,0.6);
       color: white;
       display: none;
@@ -54,35 +55,24 @@
       left: 0;
       width: 100vw;
       height: 100vh;
-      object-fit: cover;
+      object-fit: contain; /* 🔹 se adapta mejor a 1920x1080 */
+      background: black;
       z-index: 3;
-      display: none;
-      transform-origin: center center;
-    }
-    /* 🔄 Si el dispositivo está en vertical, giramos el video */
-    @media screen and (orientation: portrait) {
-      video#mainVideo {
-        transform: rotate(90deg);
-        width: 100vh;
-        height: 100vw;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%) rotate(90deg);
-      }
+      display: none; /* oculto hasta activarse */
     }
     model-viewer {
       position: absolute;
       width: 100%;
       height: 100%;
       z-index: 4;
-      background-color: transparent !important;
-      display: none;
+      background: black; /* 🔹 fondo sólido */
+      display: none; /* oculto al inicio */
     }
   </style>
 </head>
 <body>
   <button id="startButton">Iniciar Cámara</button>
-  <div id="instructionText">🔄 Gira tu pantalla</div>
+  <div id="instructionText">Gira tu pantalla</div>
   <video id="camera" autoplay playsinline muted></video>
 
   <!-- Video principal -->
@@ -97,9 +87,10 @@
     auto-rotate="false"
     shadow-intensity="1"
     exposure="1.2"
+    environment-image="neutral"
     interaction-prompt="none"
     disable-zoom
-    style="--poster-color: transparent;">
+    style="--poster-color: transparent; transform: scale(1.5);"> <!-- 🔹 Ajusta scale a lo que necesites -->
   </model-viewer>
 
   <script>
@@ -111,6 +102,7 @@
 
     startButton.addEventListener("click", async () => {
       try {
+        // Activar cámara
         let stream;
         try {
           stream = await navigator.mediaDevices.getUserMedia({
@@ -121,24 +113,24 @@
         }
         camera.srcObject = stream;
 
-        // Mostrar aviso
+        // Ocultar botón y mostrar instrucciones
         startButton.style.display = "none";
         instructionText.style.display = "block";
 
         // Pre-cargar video
         mainVideo.load();
 
-        // Después de 5s reproducir video
+        // Después de 5 segundos reproducir el video
         setTimeout(() => {
           instructionText.style.display = "none";
           mainVideo.style.display = "block";
-          mainVideo.muted = false;
+          mainVideo.muted = false; // 🔹 habilita audio al estar user-gesture
           mainVideo.play().catch(err => {
-            console.log("No se pudo reproducir automáticamente:", err);
+            console.log("No se pudo reproducir el video automáticamente:", err);
           });
         }, 5000);
 
-        // Cuando termine el video → mostrar modelo
+        // Cuando el video termine → mostrar modelo
         mainVideo.addEventListener("ended", () => {
           mainVideo.style.display = "none";
           viewer.style.display = "block";
