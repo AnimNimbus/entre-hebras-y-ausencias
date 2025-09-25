@@ -1,70 +1,90 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.1.4/dist/mindar-image-aframe.prod.js"></script>
-    <style>
-      body { margin: 0; overflow: hidden; }
-      #instruction {
-        position: absolute;
-        top: 10px;
-        left: 50%;
-        transform: translateX(-50%);
-        font-size: 22px;
-        font-weight: bold;
-        color: white;
-        background: rgba(0,0,0,0.6);
-        padding: 10px 20px;
-        border-radius: 10px;
-        z-index: 9999;
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Entre Hebras y Ausencias - AR</title>
+  <style>
+    body { margin: 0; overflow: hidden; background: #000; }
+
+    #instruction {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 22px;
+      font-weight: bold;
+      color: white;
+      background: rgba(0,0,0,0.6);
+      padding: 10px 20px;
+      border-radius: 10px;
+      z-index: 1;              /* visible sobre la cámara */
+      pointer-events: none;    /* no bloquea clics/touch */
+      font-family: Arial, sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <!-- Texto de instrucción -->
+  <div id="instruction">Junta los 3 cuadros</div>
+
+  <!-- AR.js + Three.js -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.152.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@ar-js-org/ar.js/three.js/build/ar-threex.min.js"></script>
+
+  <script>
+    // Configuración de escena
+    const scene = new THREE.Scene();
+    const camera = new THREE.Camera();
+    scene.add(camera);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.domElement.style.position = "absolute";
+    renderer.domElement.style.top = "0";
+    renderer.domElement.style.left = "0";
+    document.body.appendChild(renderer.domElement);
+
+    // AR.js con cámara
+    const arSource = new THREEx.ArToolkitSource({ sourceType: "webcam" });
+    arSource.init(() => {
+      setTimeout(() => {
+        onResize();
+      }, 2000);
+    });
+
+    window.addEventListener("resize", () => {
+      onResize();
+    });
+
+    function onResize() {
+      arSource.onResize();
+      arSource.copySizeTo(renderer.domElement);
+      if (arContext.arController !== null) {
+        arSource.copySizeTo(arContext.arController.canvas);
       }
-    </style>
-  </head>
-  <body>
-    <!-- Texto de instrucción -->
-    <div id="instruction">Junta los 3 cuadros</div>
+    }
 
-    <!-- Escena AR -->
-    <a-scene
-      mindar-image="imageTargetSrc: ./targets/cuadros.mind;"
-      vr-mode-ui="enabled: false"
-      device-orientation-permission-ui="enabled: true"
-      embedded
-    >
-      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+    // Contexto AR
+    const arContext = new THREEx.ArToolkitContext({
+      cameraParametersUrl: "https://cdn.jsdelivr.net/npm/@ar-js-org/ar.js/three.js/data/camera_para.dat",
+      detectionMode: "mono_and_matrix",
+      matrixCodeType: "3x3",
+    });
 
-      <!-- Targets individuales -->
-      <a-entity mindar-image-target="targetIndex: 0" id="target-victima"></a-entity>
-      <a-entity mindar-image-target="targetIndex: 1" id="target-testigo"></a-entity>
-      <a-entity mindar-image-target="targetIndex: 2" id="target-agresor"></a-entity>
-    </a-scene>
+    arContext.init(() => {
+      camera.projectionMatrix.copy(arContext.getProjectionMatrix());
+    });
 
-    <script>
-      const victima = document.querySelector("#target-victima");
-      const testigo = document.querySelector("#target-testigo");
-      const agresor = document.querySelector("#target-agresor");
-      const instruction = document.getElementById("instruction");
-
-      let seenVictima = false;
-      let seenTestigo = false;
-      let seenAgresor = false;
-
-      // Detectar aparición de cada target
-      victima.addEventListener("targetFound", () => { seenVictima = true; checkAll(); });
-      testigo.addEventListener("targetFound", () => { seenTestigo = true; checkAll(); });
-      agresor.addEventListener("targetFound", () => { seenAgresor = true; checkAll(); });
-
-      // Detectar cuando se pierden
-      victima.addEventListener("targetLost", () => { seenVictima = false; });
-      testigo.addEventListener("targetLost", () => { seenTestigo = false; });
-      agresor.addEventListener("targetLost", () => { seenAgresor = false; });
-
-      function checkAll() {
-        if (seenVictima && seenTestigo && seenAgresor) {
-          instruction.textContent = "¡Activado!";
-          instruction.style.background = "rgba(0, 150, 0, 0.8)";
-        }
+    // Loop de renderizado
+    function animate() {
+      requestAnimationFrame(animate);
+      if (arSource.ready === true) {
+        arContext.update(arSource.domElement);
       }
-    </script>
-  </body>
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
+</body>
 </html>
