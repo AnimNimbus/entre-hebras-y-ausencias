@@ -1,43 +1,110 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <title>Entre Hebras y Ausencias</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover" />
+  <title>Prueba Cámara — AR</title>
   <style>
-    body {
-      margin: 0;
-      overflow: hidden;
+    html,body { height:100%; margin:0; background:#000; color:#fff; font-family:system-ui,Arial; }
+    #app { width:100%; height:100%; display:flex; align-items:center; justify-content:center; position:relative; }
+    video#cam {
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      -webkit-transform: scaleX(-1); /* espejo opcional */
+      transform: none;
+      display:none; /* se mostrará cuando haya stream */
     }
+    #overlay {
+      position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:auto;
+      background: linear-gradient(0deg, rgba(0,0,0,0.45), rgba(0,0,0,0.25));
+      z-index:10;
+      flex-direction:column;
+      gap:12px;
+    }
+    button.cta {
+      background:#ff3b30; color:#fff; border:none; padding:14px 20px; border-radius:10px; font-size:18px;
+    }
+    #msg { font-size:14px; opacity:0.9; max-width:86%; text-align:center; }
+    #small { position:absolute; left:8px; bottom:8px; font-size:12px; color:#ddd; }
+
+    /* Texto fijo arriba */
     #textoOverlay {
-      position: absolute;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,0.7);
-      color: white;
-      padding: 10px 20px;
-      border-radius: 10px;
-      font-family: Arial, sans-serif;
-      font-size: 18px;
-      z-index: 10;
+      position:absolute;
+      top:15px;
+      left:50%;
+      transform:translateX(-50%);
+      background:rgba(0,0,0,0.6);
+      color:#fff;
+      padding:6px 12px;
+      border-radius:6px;
+      font-size:16px;
+      z-index:20;
+      text-align:center;
     }
   </style>
 </head>
 <body>
-  <!-- Texto fijo -->
-  <div id="textoOverlay">Junta los 3 cuadros</div>
+  <div id="app">
+    <video id="cam" playsinline autoplay muted></video>
 
-  <!-- AR -->
-  <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
+    <!-- Texto arriba -->
+    <div id="textoOverlay">Junta los 3 cuadros</div>
 
-  <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
-    <!-- marcador de prueba -->
-    <a-marker preset="hiro">
-      <a-box position="0 0.5 0" material="color: red;"></a-box>
-    </a-marker>
+    <div id="overlay">
+      <div id="msg">Para iniciar la experiencia, permite el uso de la cámara.<br>Pulsa el botón para abrir el permiso.</div>
+      <button id="btnStart" class="cta">Iniciar cámara</button>
+      <div style="font-size:12px; opacity:0.9; margin-top:6px;">Si el permiso ya fue negado, revisa ajustes del navegador</div>
+    </div>
 
-    <a-entity camera></a-entity>
-  </a-scene>
+    <div id="small">Si no ves la cámara, usa Chrome (Android) o Safari (iOS) y asegúrate de estar en HTTPS.</div>
+  </div>
+
+  <script>
+    const btn = document.getElementById('btnStart');
+    const overlay = document.getElementById('overlay');
+    const video = document.getElementById('cam');
+    const msg = document.getElementById('msg');
+
+    async function startCamera() {
+      try {
+        let stream = null;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } } });
+        } catch (err) {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        }
+
+        video.srcObject = stream;
+        video.onloadedmetadata = () => {
+          video.play().catch(()=>{});
+          video.style.display = 'block';
+          overlay.style.display = 'none';
+        };
+      } catch (err) {
+        console.error("Error al acceder a la cámara:", err);
+        if (err && err.name === 'NotAllowedError') {
+          msg.innerText = "Acceso denegado. Ve a ajustes del navegador y HABILITA la cámara para este sitio.";
+        } else if (err && err.name === 'NotFoundError') {
+          msg.innerText = "No se encontró cámara disponible en este dispositivo.";
+        } else {
+          msg.innerText = "No se pudo abrir la cámara. Prueba otro navegador (Chrome/Firefox/Safari) o revisa permisos.";
+        }
+      }
+    }
+
+    btn.addEventListener('click', startCamera);
+
+    window.addEventListener('load', async () => {
+      if (navigator.permissions) {
+        try {
+          const p = await navigator.permissions.query({ name: 'camera' });
+          if (p.state === 'granted') {
+            startCamera();
+          }
+        } catch(e){}
+      }
+    });
+  </script>
 </body>
 </html>
