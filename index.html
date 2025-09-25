@@ -3,128 +3,124 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover" />
-  <title>Experiencia AR</title>
+  <title>AR — Tres Cuadros</title>
+
+  <!-- Librerías -->
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/aframe/mindar-image-aframe.prod.js"></script>
+
   <style>
-    html, body {
-      margin:0; padding:0;
-      height:100%; width:100%;
-      overflow:hidden;
-      background:#000; color:#fff;
-      font-family:Arial, sans-serif;
-    }
+    body, html { margin: 0; padding: 0; overflow: hidden; background: #000; }
     #overlay {
-      position:absolute; inset:0;
-      display:flex; flex-direction:column;
-      align-items:center; justify-content:center;
-      background:rgba(0,0,0,0.7);
-      z-index:10; gap:15px; text-align:center;
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.85);
+      color: white; font-family: sans-serif;
+      z-index: 10;
     }
     #btnStart {
-      background:#ff3b30; color:#fff;
-      border:none; padding:14px 20px;
-      border-radius:10px; font-size:18px;
+      background: #ff3b30; border: none;
+      padding: 14px 20px; border-radius: 8px;
+      color: #fff; font-size: 18px; cursor: pointer;
+      margin-top: 16px;
     }
-    #texto {
-      position:absolute; top:20px; left:0; right:0;
-      text-align:center;
-      font-size:22px; font-weight:bold; color:#00ffcc;
-      display:none; text-shadow:0 0 6px #000;
-      z-index:5;
+    #hint {
+      margin-top: 12px;
+      font-size: 20px;
+      display: none; /* oculto al inicio */
     }
-    video.hidden { display:none; }
   </style>
-
-  <!-- Librerías de MindAR + ThreeJS -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.152.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar/dist/mindar-image-three.prod.js"></script>
 </head>
 <body>
   <!-- Overlay inicial -->
   <div id="overlay">
     <div>Para iniciar la experiencia, permite el uso de la cámara.</div>
     <button id="btnStart">Iniciar cámara</button>
+    <div id="hint">👉 Junta los 3 cuadros</div>
   </div>
 
-  <!-- Texto que aparece tras activar cámara -->
-  <div id="texto">Junta los 3 cuadros</div>
+  <!-- Escena AR -->
+  <a-scene
+    mindar-image="imageTargetSrc: ./targets/cuadros.mind;"
+    embedded
+    color-space="sRGB"
+    renderer="colorManagement: true, physicallyCorrectLights"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false"
+  >
+    <a-assets>
+      <video id="videoAgresor" src="./videos/agresor.mp4" preload="auto" playsinline webkit-playsinline></video>
+      <video id="videoVictima" src="./videos/victima.mp4" preload="auto" playsinline webkit-playsinline></video>
+      <video id="videoTestigo" src="./videos/testigo.mp4" preload="auto" playsinline webkit-playsinline></video>
+    </a-assets>
 
-  <!-- Videos ocultos -->
-  <video id="videoAgresor" class="hidden" src="videos/agresor.mp4" playsinline></video>
-  <video id="videoVictima" class="hidden" src="videos/victima.mp4" playsinline></video>
-  <video id="videoTestigo" class="hidden" src="videos/testigo.mp4" playsinline></video>
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+    <!-- Target 0: Agresor -->
+    <a-entity id="target0" mindar-image-target="targetIndex: 0">
+      <a-video src="#videoAgresor" width="1" height="0.6" position="0 0 0"></a-video>
+    </a-entity>
+
+    <!-- Target 1: Víctima -->
+    <a-entity id="target1" mindar-image-target="targetIndex: 1">
+      <a-video src="#videoVictima" width="1" height="0.6" position="0 0 0"></a-video>
+    </a-entity>
+
+    <!-- Target 2: Testigo -->
+    <a-entity id="target2" mindar-image-target="targetIndex: 2">
+      <a-video src="#videoTestigo" width="1" height="0.6" position="0 0 0"></a-video>
+    </a-entity>
+  </a-scene>
 
   <script>
     const btn = document.getElementById("btnStart");
     const overlay = document.getElementById("overlay");
-    const texto = document.getElementById("texto");
+    const hint = document.getElementById("hint");
+
+    const vAgresor = document.getElementById("videoAgresor");
+    const vVictima = document.getElementById("videoVictima");
+    const vTestigo = document.getElementById("videoTestigo");
+
+    // Estado de visibilidad de targets
+    const targetsVisible = {0: false, 1: false, 2: false};
+
+    function checkAllVisible() {
+      if (targetsVisible[0] && targetsVisible[1] && targetsVisible[2]) {
+        // Reiniciar y reproducir sincronizado
+        [vAgresor, vVictima, vTestigo].forEach(v => {
+          v.currentTime = 0;
+          v.play();
+        });
+      } else {
+        // Si falta alguno, pausamos todos
+        [vAgresor, vVictima, vTestigo].forEach(v => v.pause());
+      }
+    }
 
     btn.addEventListener("click", async () => {
-      overlay.style.display = "none";   
-      texto.style.display = "block";    
-      startAR(); 
+      try {
+        await navigator.mediaDevices.getUserMedia({ video: true });
+        overlay.style.display = "none";
+        hint.style.display = "block";
+      } catch (err) {
+        alert("Error al acceder a la cámara: " + err);
+      }
     });
 
-    async function startAR() {
-      const mindarThree = new window.MINDAR.IMAGE.MindARThree({
-        container: document.body,
-        imageTargetSrc: "targets/cuadros.mind",
-      });
+    // Escuchar eventos de cada target
+    const t0 = document.getElementById("target0");
+    const t1 = document.getElementById("target1");
+    const t2 = document.getElementById("target2");
 
-      const {renderer, scene, camera} = mindarThree;
+    t0.addEventListener("targetFound", () => { targetsVisible[0] = true; checkAllVisible(); });
+    t0.addEventListener("targetLost", () => { targetsVisible[0] = false; checkAllVisible(); });
 
-      // Cargar videos
-      const vAgresor = document.getElementById("videoAgresor");
-      const vVictima = document.getElementById("videoVictima");
-      const vTestigo = document.getElementById("videoTestigo");
+    t1.addEventListener("targetFound", () => { targetsVisible[1] = true; checkAllVisible(); });
+    t1.addEventListener("targetLost", () => { targetsVisible[1] = false; checkAllVisible(); });
 
-      const texAgresor = new THREE.VideoTexture(vAgresor);
-      const texVictima = new THREE.VideoTexture(vVictima);
-      const texTestigo = new THREE.VideoTexture(vTestigo);
-
-      const planeA = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.6), new THREE.MeshBasicMaterial({map: texAgresor}));
-      const planeV = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.6), new THREE.MeshBasicMaterial({map: texVictima}));
-      const planeT = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.6), new THREE.MeshBasicMaterial({map: texTestigo}));
-
-      const anchor0 = mindarThree.addAnchor(0); // agresor
-      const anchor1 = mindarThree.addAnchor(1); // victima
-      const anchor2 = mindarThree.addAnchor(2); // testigo
-
-      anchor0.group.add(planeA);
-      anchor1.group.add(planeV);
-      anchor2.group.add(planeT);
-
-      let detected = [false, false, false];
-
-      function resetVideos() {
-        [vAgresor, vVictima, vTestigo].forEach(v => {
-          v.pause();
-          v.currentTime = 0;
-        });
-      }
-
-      function checkAll() {
-        if (detected.every(d => d)) {
-          [vAgresor, vVictima, vTestigo].forEach(v => {
-            v.currentTime = 0;
-            v.play();
-          });
-        } else {
-          resetVideos();
-        }
-      }
-
-      anchor0.onTargetFound = () => { detected[0] = true; checkAll(); };
-      anchor0.onTargetLost  = () => { detected[0] = false; checkAll(); };
-      anchor1.onTargetFound = () => { detected[1] = true; checkAll(); };
-      anchor1.onTargetLost  = () => { detected[1] = false; checkAll(); };
-      anchor2.onTargetFound = () => { detected[2] = true; checkAll(); };
-      anchor2.onTargetLost  = () => { detected[2] = false; checkAll(); };
-
-      await mindarThree.start();
-      renderer.setAnimationLoop(() => {
-        renderer.render(scene, camera);
-      });
-    }
+    t2.addEventListener("targetFound", () => { targetsVisible[2] = true; checkAllVisible(); });
+    t2.addEventListener("targetLost", () => { targetsVisible[2] = false; checkAllVisible(); });
   </script>
 </body>
 </html>
