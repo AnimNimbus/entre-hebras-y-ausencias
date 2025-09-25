@@ -54,7 +54,6 @@
     container.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
-    // ligero fondo para contraste
     scene.background = new THREE.Color(0x0a0a0a);
 
     const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.01, 100);
@@ -72,7 +71,7 @@
     controls.dampingFactor = 0.08;
     controls.minDistance = 0.5;
     controls.maxDistance = 8;
-    controls.maxPolarAngle = Math.PI * 0.95; // evita pasar por debajo del suelo
+    controls.maxPolarAngle = Math.PI * 0.95;
 
     let autoRotate = true;
     autoBtn.textContent = `Auto-rotate: ${autoRotate? 'on':'off'}`;
@@ -83,45 +82,53 @@
     });
 
     resetBtn.addEventListener('click', () => {
-      // restablecer cámara y control
       camera.position.set(0, 0.6, 2);
       controls.target.set(0, 0.2, 0);
       controls.update();
     });
 
-    // rejilla ligera opcional (puedes comentar)
     const grid = new THREE.GridHelper(5, 16, 0x222222, 0x151515);
     grid.position.y = -0.01;
     scene.add(grid);
 
     let model = null;
-
     const loader = new GLTFLoader();
-    const modelPath = 'models/pose_final_cuadro.glb'; // <-- asegúrate que exista en repo/models/
+    const modelPath = 'models/pose_final_cuadro.glb';
 
-    // Helper: ajustar escala y centrar el modelo en la escena
+    // Ajustar escala y centrar
     function frameModelToView(object3D) {
-      const box = new THREE.Box3().setFromObject(object3D);
-      const size = new THREE.Vector3();
-      box.getSize(size);
-      const maxAxis = Math.max(size.x, size.y, size.z);
-      // escala para ajustar a ~1.2 unidad
-      const desired = 1.2;
-      const scale = desired / maxAxis;
-      object3D.scale.setScalar(scale);
+      try {
+        const box = new THREE.Box3().setFromObject(object3D);
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        const maxAxis = Math.max(size.x, size.y, size.z);
 
-      // recalc center
-      const box2 = new THREE.Box3().setFromObject(object3D);
-      const center = new THREE.Vector3();
-      box2.getCenter(center);
-      object3D.position.x += (object3D.position.x - center.x);
-      object3D.position.y += (object3D.position.y - center.y);
-      object3D.position.z += (object3D.position.z - center.z);
+        if (maxAxis === 0) {
+          console.warn("⚠️ El modelo parece vacío");
+          return;
+        }
+
+        const desired = 1.2;
+        const scale = desired / maxAxis;
+        object3D.scale.setScalar(scale);
+
+        const box2 = new THREE.Box3().setFromObject(object3D);
+        const center = new THREE.Vector3();
+        box2.getCenter(center);
+        object3D.position.sub(center); // lo centra en (0,0,0)
+      } catch (e) {
+        console.error("Error en frameModelToView:", e);
+      }
     }
 
     loader.load(
       modelPath,
       (gltf) => {
+        console.log('✅ GLB cargado:', gltf);
+        if (!gltf.scene) {
+          loadingEl.textContent = '⚠️ El archivo se cargó, pero está vacío.';
+          return;
+        }
         model = gltf.scene;
         model.traverse((c)=>{ if (c.isMesh){ c.castShadow = true; c.receiveShadow = true; } });
         scene.add(model);
@@ -129,19 +136,17 @@
         loadingEl.style.display = 'none';
       },
       (xhr) => {
-        // progreso opcional
         if (xhr && xhr.total) {
           const pct = Math.round((xhr.loaded / xhr.total) * 100);
           loadingEl.textContent = `Cargando modelo… ${pct}%`;
         }
       },
       (error) => {
-        console.error('Error cargando GLB:', error);
+        console.error('❌ Error cargando GLB:', error);
         loadingEl.textContent = 'Error cargando modelo. Revisa consola (F12).';
       }
     );
 
-    // resize
     window.addEventListener('resize', () => {
       renderer.setSize(container.clientWidth, container.clientHeight);
       camera.aspect = container.clientWidth / container.clientHeight;
@@ -153,7 +158,7 @@
     function animate() {
       requestAnimationFrame(animate);
       const dt = clock.getDelta();
-      if (model && autoRotate) model.rotation.y += dt * 0.4; // rotación suave
+      if (model && autoRotate) model.rotation.y += dt * 0.4;
       controls.update();
       renderer.render(scene, camera);
     }
