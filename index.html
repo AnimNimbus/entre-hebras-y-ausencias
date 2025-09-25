@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>AR con Cámara, Videos y Modelo 3D</title>
+  <title>AR con Video y Modelo 3D</title>
   <style>
     body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; background: black; }
     #startButton, #videoButton {
@@ -33,15 +33,6 @@
       color: white;
       display: none;
     }
-    video#camera {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      object-fit: cover;
-      z-index: 1;
-    }
     video#mainVideo {
       position: absolute;
       top: 0;
@@ -58,7 +49,6 @@
   <button id="startButton">Iniciar Cámara</button>
   <div id="instructionText">Junta los 3 cuadros</div>
   <button id="videoButton">No todo es lo que parece</button>
-  <video id="camera" autoplay playsinline muted></video>
   <video id="mainVideo" src="videos/victima.mp4"></video>
 
   <script type="module">
@@ -69,61 +59,85 @@
     const startButton = document.getElementById("startButton");
     const instructionText = document.getElementById("instructionText");
     const videoButton = document.getElementById("videoButton");
-    const cameraView = document.getElementById("camera");
     const mainVideo = document.getElementById("mainVideo");
 
     let renderer, scene, camera, modelo;
+    let hitTestSource = null;
+    let localSpace = null;
+    let reticle;
 
-    startButton.addEventListener("click", async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { exact: "environment" } }
-        });
-        cameraView.srcObject = stream;
+    startButton.addEventListener("click", () => {
+      startButton.style.display = "none";
+      instructionText.style.display = "block";
+      videoButton.style.display = "block";
 
-        instructionText.style.display = "block";
-        startButton.style.display = "none";
-        videoButton.style.display = "block";
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.xr.enabled = true;
+      document.body.appendChild(renderer.domElement);
 
-        // Configuración AR
-        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.xr.enabled = true;
-        document.body.appendChild(renderer.domElement);
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
 
-        scene = new THREE.Scene();
-        camera = new THREE.PerspectiveCamera(
-          70,
-          window.innerWidth / window.innerHeight,
-          0.01,
-          20
-        );
+      const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+      scene.add(light);
 
-        const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
-        scene.add(light);
+      const loader = new GLTFLoader();
+      loader.load("models/pose_final_cuadro.glb", (gltf) => {
+        modelo = gltf.scene;
+        modelo.scale.set(0.5, 0.5, 0.5);
+        modelo.visible = false; 
+        scene.add(modelo);
+      });
 
-        const loader = new GLTFLoader();
-        loader.load("models/pose_final_cuadro.glb", (gltf) => {
-          modelo = gltf.scene;
-          modelo.scale.set(0.5, 0.5, 0.5);
-          modelo.visible = false; // se mostrará después del video
-          scene.add(modelo);
-        });
+      // retícula para indicar posición
+      const ringGeo = new THREE.RingGeometry(0.1, 0.11, 32).rotateX(-Math.PI/2);
+      const ringMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+      reticle = new THREE.Mesh(ringGeo, ringMat);
+      reticle.matrixAutoUpdate = false;
+      reticle.visible = false;
+      scene.add(reticle);
 
-        const arButton = ARButton.createButton(renderer);
-        document.body.appendChild(arButton);
+      const arButton = ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] });
+      document.body.appendChild(arButton);
 
-        renderer.setAnimationLoop(() => {
-          if (modelo) modelo.rotation.y += 0.005; // ligera rotación animada
-          renderer.render(scene, camera);
-        });
+      renderer.setAnimationLoop((timestamp, frame) => {
+        if (frame) {
+          const session = renderer.xr.getSession();
+          if (!hitTestSource) {
+            session.requestReferenceSpace('viewer').then((space) => {
+              session.requestHitTestSource({ space }).then((source) => {
+                hitTestSource = source;
+              });
+            });
+            session.addEventListener("end", () => {
+              hitTestSource = null;
+              localSpace = null;
+            });
+          }
+          if (hitTestSource) {
+            const refSpace = renderer.xr.getReferenceSpace();
+            const hitTestResults = frame.getHitTestResults(hitTestSource);
+            if (hitTestResults.length > 0) {
+              const pose = hitTestResults[0].getPose(refSpace);
+              reticle.visible = true;
+              reticle.matrix.fromArray(pose.transform.matrix);
 
-      } catch (error) {
-        alert("No se pudo acceder a la cámara: " + error);
-      }
+              // Colocar el modelo en la retícula la primera vez que se activa
+              if (modelo && !modelo.visible && mainVideo.style.display === "none") {
+                modelo.visible = true;
+                modelo.position.setFromMatrixPosition(reticle.matrix);
+              }
+            } else {
+              reticle.visible = false;
+            }
+          }
+        }
+        renderer.render(scene, camera);
+      });
     });
 
-    // Botón para reproducir el video con sonido
+    // botón de video
     videoButton.addEventListener("click", () => {
       instructionText.style.display = "none";
       videoButton.style.display = "none";
@@ -133,8 +147,8 @@
 
       mainVideo.onended = () => {
         mainVideo.style.display = "none";
-        if (modelo) modelo.visible = true; // mostrar el modelo 3D
-        instructionText.style.display = "block"; // vuelve el texto
+        instructionText.style.display = "block";
+        if (modelo) modelo.visible = true;
       };
     });
   </script>
