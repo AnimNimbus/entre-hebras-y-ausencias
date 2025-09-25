@@ -3,108 +3,116 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover" />
-  <title>Prueba Cámara — AR</title>
+  <title>Experiencia AR</title>
   <style>
-    html,body { height:100%; margin:0; background:#000; color:#fff; font-family:system-ui,Arial; }
-    #app { width:100%; height:100%; display:flex; align-items:center; justify-content:center; position:relative; }
-    video#cam {
-      width:100%;
-      height:100%;
-      object-fit:cover;
-      -webkit-transform: scaleX(-1); /* espejo opcional */
-      transform: none;
-      display:none; /* se mostrará cuando haya stream */
-    }
+    html, body { margin:0; height:100%; overflow:hidden; background:#000; color:#fff; font-family:Arial, sans-serif; }
     #overlay {
-      position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:auto;
-      background: linear-gradient(0deg, rgba(0,0,0,0.45), rgba(0,0,0,0.25));
-      z-index:10;
-      flex-direction:column;
-      gap:12px;
+      position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+      background:rgba(0,0,0,0.7); z-index:10; gap:15px; text-align:center;
     }
-    button.cta {
+    #btnStart {
       background:#ff3b30; color:#fff; border:none; padding:14px 20px; border-radius:10px; font-size:18px;
     }
-    #msg { font-size:14px; opacity:0.9; max-width:86%; text-align:center; }
-    #small { position:absolute; left:8px; bottom:8px; font-size:12px; color:#ddd; }
-
-    /* Texto fijo arriba */
-    #textoOverlay {
-      position:absolute;
-      top:15px;
-      left:50%;
-      transform:translateX(-50%);
-      background:rgba(0,0,0,0.6);
-      color:#fff;
-      padding:6px 12px;
-      border-radius:6px;
-      font-size:16px;
-      z-index:20;
-      text-align:center;
+    #texto {
+      position:absolute; top:20px; width:100%; text-align:center;
+      font-size:22px; font-weight:bold; color:#00ffcc; display:none;
+      text-shadow:0 0 6px #000;
+      z-index:5;
     }
+    video.hidden { display:none; }
   </style>
+
+  <!-- Librerías de MindAR + ThreeJS -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.152.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar/dist/mindar-image-three.prod.js"></script>
 </head>
 <body>
-  <div id="app">
-    <video id="cam" playsinline autoplay muted></video>
-
-    <!-- Texto arriba -->
-    <div id="textoOverlay">Junta los 3 cuadros</div>
-
-    <div id="overlay">
-      <div id="msg">Para iniciar la experiencia, permite el uso de la cámara.<br>Pulsa el botón para abrir el permiso.</div>
-      <button id="btnStart" class="cta">Iniciar cámara</button>
-      <div style="font-size:12px; opacity:0.9; margin-top:6px;">Si el permiso ya fue negado, revisa ajustes del navegador</div>
-    </div>
-
-    <div id="small">Si no ves la cámara, usa Chrome (Android) o Safari (iOS) y asegúrate de estar en HTTPS.</div>
+  <!-- Overlay inicial -->
+  <div id="overlay">
+    <div>Para iniciar la experiencia, permite el uso de la cámara.</div>
+    <button id="btnStart">Iniciar cámara</button>
   </div>
 
+  <!-- Texto que aparece tras activar cámara -->
+  <div id="texto">Junta los 3 cuadros</div>
+
+  <!-- Videos ocultos -->
+  <video id="videoAgresor" class="hidden" src="videos/agresor.mp4" playsinline></video>
+  <video id="videoVictima" class="hidden" src="videos/victima.mp4" playsinline></video>
+  <video id="videoTestigo" class="hidden" src="videos/testigo.mp4" playsinline></video>
+
   <script>
-    const btn = document.getElementById('btnStart');
-    const overlay = document.getElementById('overlay');
-    const video = document.getElementById('cam');
-    const msg = document.getElementById('msg');
+    const btn = document.getElementById("btnStart");
+    const overlay = document.getElementById("overlay");
+    const texto = document.getElementById("texto");
 
-    async function startCamera() {
-      try {
-        let stream = null;
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } } });
-        } catch (err) {
-          stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        }
-
-        video.srcObject = stream;
-        video.onloadedmetadata = () => {
-          video.play().catch(()=>{});
-          video.style.display = 'block';
-          overlay.style.display = 'none';
-        };
-      } catch (err) {
-        console.error("Error al acceder a la cámara:", err);
-        if (err && err.name === 'NotAllowedError') {
-          msg.innerText = "Acceso denegado. Ve a ajustes del navegador y HABILITA la cámara para este sitio.";
-        } else if (err && err.name === 'NotFoundError') {
-          msg.innerText = "No se encontró cámara disponible en este dispositivo.";
-        } else {
-          msg.innerText = "No se pudo abrir la cámara. Prueba otro navegador (Chrome/Firefox/Safari) o revisa permisos.";
-        }
-      }
-    }
-
-    btn.addEventListener('click', startCamera);
-
-    window.addEventListener('load', async () => {
-      if (navigator.permissions) {
-        try {
-          const p = await navigator.permissions.query({ name: 'camera' });
-          if (p.state === 'granted') {
-            startCamera();
-          }
-        } catch(e){}
-      }
+    btn.addEventListener("click", async () => {
+      overlay.style.display = "none";   
+      texto.style.display = "block";    
+      startAR(); 
     });
+
+    async function startAR() {
+      const mindarThree = new window.MINDAR.IMAGE.MindARThree({
+        container: document.body,
+        imageTargetSrc: "targets/cuadros.mind",
+      });
+
+      const {renderer, scene, camera} = mindarThree;
+
+      const vAgresor = document.getElementById("videoAgresor");
+      const vVictima = document.getElementById("videoVictima");
+      const vTestigo = document.getElementById("videoTestigo");
+
+      const texAgresor = new THREE.VideoTexture(vAgresor);
+      const texVictima = new THREE.VideoTexture(vVictima);
+      const texTestigo = new THREE.VideoTexture(vTestigo);
+
+      const planeA = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.6), new THREE.MeshBasicMaterial({map: texAgresor}));
+      const planeV = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.6), new THREE.MeshBasicMaterial({map: texVictima}));
+      const planeT = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.6), new THREE.MeshBasicMaterial({map: texTestigo}));
+
+      const anchor0 = mindarThree.addAnchor(0); // agresor
+      const anchor1 = mindarThree.addAnchor(1); // victima
+      const anchor2 = mindarThree.addAnchor(2); // testigo
+
+      anchor0.group.add(planeA);
+      anchor1.group.add(planeV);
+      anchor2.group.add(planeT);
+
+      let detected = [false, false, false];
+
+      function resetVideos() {
+        [vAgresor, vVictima, vTestigo].forEach(v => {
+          v.pause();
+          v.currentTime = 0;
+        });
+      }
+
+      function checkAll() {
+        if (detected.every(d => d)) {
+          // Reiniciar y reproducir sincronizados
+          [vAgresor, vVictima, vTestigo].forEach(v => {
+            v.currentTime = 0;
+            v.play();
+          });
+        } else {
+          resetVideos();
+        }
+      }
+
+      anchor0.onTargetFound = () => { detected[0] = true; checkAll(); };
+      anchor0.onTargetLost  = () => { detected[0] = false; checkAll(); };
+      anchor1.onTargetFound = () => { detected[1] = true; checkAll(); };
+      anchor1.onTargetLost  = () => { detected[1] = false; checkAll(); };
+      anchor2.onTargetFound = () => { detected[2] = true; checkAll(); };
+      anchor2.onTargetLost  = () => { detected[2] = false; checkAll(); };
+
+      await mindarThree.start();
+      renderer.setAnimationLoop(() => {
+        renderer.render(scene, camera);
+      });
+    }
   </script>
 </body>
 </html>
