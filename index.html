@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Entre hebras y ausencias</title>
+  <title>AR con Video + Modelo 3D</title>
   <!-- model-viewer -->
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
   <style>
@@ -33,7 +33,7 @@
       width: 100%;
       text-align: center;
       z-index: 10;
-      font-size: 20px;
+      font-size: 22px;
       font-weight: bold;
       padding: 12px;
       background: rgba(0,0,0,0.5);
@@ -55,9 +55,9 @@
       left: 0;
       width: 100vw;
       height: 100vh;
-      object-fit: cover; /* 🔹 Llenar pantalla completa */
+      object-fit: cover; /* ocupa toda la pantalla */
       z-index: 3;
-      display: none; /* oculto hasta activarse */
+      display: none;
     }
     model-viewer {
       position: absolute;
@@ -65,38 +65,17 @@
       height: 100%;
       z-index: 2;
       background: transparent;
-      display: none; /* oculto al inicio */
-    }
-    /* 🔹 Aviso de girar pantalla */
-    #rotateNotice {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: black;
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 22px;
-      font-weight: bold;
-      z-index: 20;
-    }
-    @media screen and (orientation: landscape) {
-      #rotateNotice { display: none; }
+      display: none;
     }
   </style>
 </head>
 <body>
-  <div id="rotateNotice">🔄 Gira tu dispositivo a horizontal para continuar</div>
-
   <button id="startButton">Iniciar Cámara</button>
-  <div id="instructionText">Junta los 3 cuadros</div>
+  <div id="instructionText">Gira tu pantalla</div>
   <video id="camera" autoplay playsinline muted></video>
 
   <!-- Video principal -->
-  <video id="mainVideo" src="videos/victima.mp4" playsinline></video>
+  <video id="mainVideo" src="videos/victima.mp4" playsinline muted></video>
 
   <!-- Modelo 3D -->
   <model-viewer id="viewer"
@@ -108,8 +87,7 @@
     auto-rotate="false"
     shadow-intensity="1"
     exposure="1.2"
-    interaction-prompt="none"
-    disable-zoom>
+    interaction-prompt="none">
   </model-viewer>
 
   <script>
@@ -121,7 +99,7 @@
 
     startButton.addEventListener("click", async () => {
       try {
-        // Activa la cámara trasera
+        // activar cámara trasera
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: { exact: "environment" } }
         });
@@ -130,19 +108,18 @@
         instructionText.style.display = "block";
         startButton.style.display = "none";
 
-        // 🔹 Después de 5 segundos → reproducir video con sonido
+        // tras 5s reproducir video
         setTimeout(() => {
-          instructionText.textContent = "¡Cuadros detectados!";
+          instructionText.style.display = "none";
           mainVideo.style.display = "block";
-          mainVideo.muted = false; // quitar silencio
-          mainVideo.play().catch(err => console.log("Error al reproducir:", err));
+          mainVideo.muted = false; // habilita audio
+          mainVideo.play().catch(err => console.log("Error video:", err));
         }, 5000);
 
-        // 🔹 Cuando termine el video → mostrar modelo
+        // cuando termina video → mostrar modelo
         mainVideo.addEventListener("ended", () => {
           mainVideo.style.display = "none";
           viewer.style.display = "block";
-          instructionText.textContent = "Explora el modelo en AR";
         });
 
       } catch (error) {
