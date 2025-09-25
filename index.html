@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>AR con Video + Modelo 3D</title>
+  <title>Entre hebras y ausencias</title>
   <!-- model-viewer -->
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
   <style>
@@ -55,8 +55,7 @@
       left: 0;
       width: 100vw;
       height: 100vh;
-      object-fit: contain; /* 🔹 Mostrar todo el video */
-      background: black;   /* 🔹 Franjas negras alrededor */
+      object-fit: cover; /* 🔹 Llenar pantalla completa */
       z-index: 3;
       display: none; /* oculto hasta activarse */
     }
@@ -68,9 +67,30 @@
       background: transparent;
       display: none; /* oculto al inicio */
     }
+    /* 🔹 Aviso de girar pantalla */
+    #rotateNotice {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: black;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: bold;
+      z-index: 20;
+    }
+    @media screen and (orientation: landscape) {
+      #rotateNotice { display: none; }
+    }
   </style>
 </head>
 <body>
+  <div id="rotateNotice">🔄 Gira tu dispositivo a horizontal para continuar</div>
+
   <button id="startButton">Iniciar Cámara</button>
   <div id="instructionText">Junta los 3 cuadros</div>
   <video id="camera" autoplay playsinline muted></video>
