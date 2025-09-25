@@ -115,21 +115,18 @@
         }
         camera.srcObject = stream;
 
-        // Ocultar botón y mostrar instrucciones
+        // Ocultar botón y mostrar instrucción
         startButton.style.display = "none";
         instructionText.style.display = "block";
 
-        // Pre-cargar video
-        mainVideo.load();
-
-        // Después de 5 segundos reproducir el video
+        // Esperar 2 segundos antes de reproducir video
         setTimeout(() => {
           instructionText.style.display = "none";
           mainVideo.style.display = "block";
           mainVideo.play().catch(err => {
             console.log("No se pudo reproducir el video automáticamente:", err);
           });
-        }, 5000);
+        }, 2000);
 
         // Cuando el video termine → mostrar modelo
         mainVideo.addEventListener("ended", () => {
